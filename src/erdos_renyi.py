@@ -1,5 +1,7 @@
 import torch
 import random
+from utils import graph_to_nx
+
 class ErdosRenyiSampler:
     def __init__(self, train_dataset):
         """
@@ -55,3 +57,17 @@ class ErdosRenyiSampler:
         edge_index = adj.nonzero(as_tuple=False).t().contiguous()
         
         return N, r, edge_index, adj
+    
+    def sample_graphs(self, num_samples=1000):
+        """
+        Sample multiple graphs and return graphs as nx.Graph objects.
+        """
+        graphs = []
+        for _ in range(num_samples):
+            N, r, edge_index, adj = self.sample()
+            G = graph_to_nx(N, edge_index)
+            graphs.append(G)
+        return graphs
+    
+
+  

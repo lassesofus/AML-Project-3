@@ -1,0 +1,2 @@
+1. We get 100 % novel, unique, novel and unique for the 1000 graphs generated with the baseline ER. Is that OK? I guess it's not unreasonable. 
+2. Should we compare average node degrees or just node degrees?
