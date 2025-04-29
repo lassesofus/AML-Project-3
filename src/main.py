@@ -43,12 +43,12 @@ for data in tqdm(baseline_graphs):
 plot_graphs(baseline_graphs, title='Baseline Graphs')
 
 # VAE with node-level latents
-VGAE = build_vgae(node_feature_dim=node_feature_dim, hidden_dim=64, latent_dim=32, num_rounds=5, decoder="mlp").to(device)
-model, hist = train(VGAE, dataset, epochs=500, checkpoint='vgae_mutag.pt', device=device)
-plot_loss(hist)
+# VGAE = build_vgae(node_feature_dim=node_feature_dim, hidden_dim=64, latent_dim=32, num_rounds=5, decoder="mlp").to(device)
+# model, hist = train(VGAE, dataset, epochs=500, checkpoint='./models/vgae_mutag.pt', device=device)
+# plot_loss(hist)
 
 model_loaded = build_vgae(node_feature_dim=node_feature_dim, hidden_dim=64, latent_dim=32, num_rounds=5, decoder="mlp").to(device)     
-load_model(model_loaded, 'vgae_mutag.pt', map_location=device) 
+load_model(model_loaded, './models/vgae_mutag.pt', map_location=device) 
 
 sizes = empirical_N_sampler(TUDataset(root='data', name='MUTAG'))
 deep_graphs = sample_graphs(model_loaded, num_graphs=1000, N_sampler=sizes)
