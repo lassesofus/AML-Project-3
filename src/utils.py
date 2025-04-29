@@ -149,20 +149,21 @@ def get_graph_stats(graphs):
     
     return (degrees, clustering, centrality)
 
-def plot_histograms(baseline_stats, empirical_stats):
+def plot_histograms(baseline_stats, empirical_stats, deep_stats):
 
     baseline_degrees, baseline_clustering, baseline_centrality = baseline_stats
     empirical_degrees, empirical_clustering, empirical_centrality = empirical_stats
+    deep_degrees, deep_clustering, deep_centrality = deep_stats
 
     # Compute common bins for each metric
-    bins_degrees = np.linspace(min(baseline_degrees + empirical_degrees), 
-                                max(baseline_degrees + empirical_degrees), 
+    bins_degrees = np.linspace(min(baseline_degrees + empirical_degrees + deep_degrees), 
+                                max(baseline_degrees + empirical_degrees + deep_degrees), 
                                 30)
-    bins_clustering = np.linspace(min(baseline_clustering + empirical_clustering), 
-                                max(baseline_clustering + empirical_clustering), 
+    bins_clustering = np.linspace(min(baseline_clustering + empirical_clustering + deep_clustering), 
+                                max(baseline_clustering + empirical_clustering + deep_clustering), 
                                 30)
-    bins_centrality = np.linspace(min(baseline_centrality + empirical_centrality), 
-                                max(baseline_centrality + empirical_centrality), 
+    bins_centrality = np.linspace(min(baseline_centrality + empirical_centrality + deep_centrality), 
+                                max(baseline_centrality + empirical_centrality + deep_centrality), 
                                 30)
 
     # Create a 3x3 grid of subplots
@@ -192,14 +193,14 @@ def plot_histograms(baseline_stats, empirical_stats):
     ax[1, 2].set_ylabel('Frequency')
 
     # Row 2: Deep generative model distributions (orange)
-    # ax[2, 0].hist(deep_degrees, bins=bins_degrees, alpha=0.5, label='Deep generative model', color='orange')
-    # ax[2, 0].set_ylabel('Frequency')
+    ax[2, 0].hist(deep_degrees, bins=bins_degrees, alpha=0.5, label='Deep generative model', color='orange')
+    ax[2, 0].set_ylabel('Frequency')
 
-    # ax[2, 1].hist(deep_clustering, bins=bins_clustering, alpha=0.5, label='Deep generative model', color='orange')
-    # ax[2, 1].set_ylabel('Frequency')
+    ax[2, 1].hist(deep_clustering, bins=bins_clustering, alpha=0.5, label='Deep generative model', color='orange')
+    ax[2, 1].set_ylabel('Frequency')
 
-    # ax[2, 2].hist(deep_centrality, bins=bins_centrality, alpha=0.5, label='Deep generative model', color='orange')
-    # ax[2, 2].set_ylabel('Frequency')
+    ax[2, 2].hist(deep_centrality, bins=bins_centrality, alpha=0.5, label='Deep generative model', color='orange')
+    ax[2, 2].set_ylabel('Frequency')
 
     # Add row labels by using fig.text
     fig.text(0.01, 0.85, "Empirical", va="center", ha="center", rotation="vertical",
@@ -210,5 +211,42 @@ def plot_histograms(baseline_stats, empirical_stats):
              fontsize=14, fontweight="bold")
 
     plt.tight_layout(rect=[0.03, 0, 1, 1])
-    plt.savefig('graph_histograms.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/graph_histograms.png', dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+def print_latex_table(results: dict) -> str:
+    """
+    Given a dictionary 'results' with keys 'baseline' and 'deep' and values as tuples:
+    (novel_percentage, unique_percentage, novel_unique_percentage)
+    this function returns a formatted LaTeX table as a string.
+    """
+    latex_table = r"""\begin{tabular}{lccc}
+\hline
+Model & Novel (\%) & Unique (\%) & Novel and Unique (\%) \\
+\hline
+Baseline & {baseline_novel:.2f} & {baseline_unique:.2f} & {baseline_novelunique:.2f} \\
+Deep Generative Model & {deep_novel:.2f} & {deep_unique:.2f} & {deep_novelunique:.2f} \\
+\hline
+\end{tabular}""".format(
+        baseline_novel=results['baseline'][0],
+        baseline_unique=results['baseline'][1],
+        baseline_novelunique=results['baseline'][2],
+        deep_novel=results['deep'][0],
+        deep_unique=results['deep'][1],
+        deep_novelunique=results['deep'][2]
+    )
+
+def plot_graphs(graphs, title="Graphs"):
+    """
+    Plot a list of graphs using matplotlib in a 3x3 grid.
+    """
+    fig, axes = plt.subplots(3, 3, figsize=(10, 10))
+    axes = axes.flatten()  # Flatten the 2D array into 1D for easier iteration.
+    for i, G in enumerate(graphs[:9]):
+        nx.draw(G, with_labels=True, ax=axes[i])
+        axes[i].set_title(f"Graph {i + 1}")
+    fig.suptitle(title)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig(f"figures/{title}.png", dpi=300, bbox_inches='tight')
     plt.show()
