@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn.models import VGAE, InnerProductDecoder
+from torch_geometric.nn import GCNConv
 from torch_geometric.utils import negative_sampling
 import networkx as nx
 from pathlib import Path
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Sequence, Callable, Optional
 from tqdm import tqdm
+import pdb
 
 
 # -----------------------------------------------------------------------------
@@ -70,16 +72,11 @@ class SimpleMPNNEncoder(nn.Module):
         logvar = self.logvar_proj(state)
         return mu, logvar
 
-# -----------------------------------------------------------------------------
-# Learnable decoder
-# -----------------------------------------------------------------------------
+# --------------------------------------------------
+# Decoders
+# --------------------------------------------------
 class MLPDecoder(nn.Module):
-    """Edge‑MLP decoder: p(A_ij = 1 | z_i, z_j).
-
-    Signature matches `InnerProductDecoder.forward(z, edge_index, sigmoid=True)`
-    so that `torch_geometric.nn.models.VGAE.recon_loss` works out‑of‑the‑box.
-    """
-
+    """Edge‑wise MLP decoder (already used earlier)."""
     def __init__(self, latent_dim: int, hidden_dim: int | None = None):
         super().__init__()
         hd = hidden_dim if hidden_dim is not None else latent_dim
@@ -89,19 +86,59 @@ class MLPDecoder(nn.Module):
             nn.Linear(hd, 1)
         )
 
-    # NOTE: Added `sigmoid` kwarg so PyG can pass it.
-    def forward(self, z: torch.Tensor, edge_index: torch.Tensor, *, sigmoid: bool = True) -> torch.Tensor:
-        zi = z[edge_index[0]]
-        zj = z[edge_index[1]]
+    def forward(self, z, edge_index, *, sigmoid: bool = True):
+        zi, zj = z[edge_index[0]], z[edge_index[1]]
         logits = self.mlp(torch.cat([zi, zj], dim=-1)).squeeze(-1)
         return torch.sigmoid(logits) if sigmoid else logits
 
-    def forward_all(self, z: torch.Tensor) -> torch.Tensor:
+    def forward_all(self, z):
         n = z.size(0)
         zi = z.unsqueeze(1).expand(n, n, -1)
         zj = z.unsqueeze(0).expand(n, n, -1)
         logits = self.mlp(torch.cat([zi, zj], dim=-1)).squeeze(-1)
         return logits
+
+class GNNDecoder(nn.Module):
+    """Message‑passing decoder suggested in lecture (node‑level latents → edge scores).
+
+    1. Build a *fully‑connected* edge_index (incl. self‑loops) for the latent graph.
+    2. Run `L` GCN layers to obtain context‑aware node states `h`.
+    3. Edge logit = h_i · h_j + learnable bias.
+    """
+
+    def __init__(self, latent_dim: int, hidden_dim: int | None = None, num_layers: int = 1):
+        super().__init__()
+        hd = hidden_dim if hidden_dim is not None else latent_dim
+        self.convs = nn.ModuleList()
+        dims = [latent_dim] + [hd] * (num_layers - 1) + [latent_dim]
+        for c_in, c_out in zip(dims[:-1], dims[1:]):
+            self.convs.append(GCNConv(c_in, c_out))
+        self.bias = nn.Parameter(torch.zeros(1))
+
+    @staticmethod
+    def _fully_connected_edge_index(n: int, device: torch.device):
+        # create undirected fully‑connected graph with self‑loops removed
+        rows, cols = zip(*[(i, j) for i in range(n) for j in range(n) if i != j])
+        return torch.tensor([rows, cols], dtype=torch.long, device=device)
+
+    def _refine_nodes(self, z):
+        edge_index = self._fully_connected_edge_index(z.size(0), z.device)
+        h = z
+        for i, conv in enumerate(self.convs):
+            h = conv(h, edge_index) + h
+            if i < len(self.convs) - 1:
+                h = F.relu(h)
+        return h
+
+    def forward(self, z, edge_index, *, sigmoid: bool = True):
+        h = self._refine_nodes(z)
+        zi, zj = h[edge_index[0]], h[edge_index[1]]
+        logits = (zi * zj).sum(dim=-1) + self.bias
+        return torch.sigmoid(logits) if sigmoid else logits
+
+    def forward_all(self, z):
+        h = self._refine_nodes(z)
+        return h @ h.T + self.bias
 
 # -----------------------------------------------------------------------------
 # Model builder
@@ -112,27 +149,20 @@ def build_vgae(node_feature_dim: int,
                latent_dim: int = 32,
                num_rounds: int = 3,
                decoder: str = "dot",
-               mlp_hidden: int | None = None) -> VGAE:
-    """Construct a VGAE with either inner‑product or learnable MLP decoder.
-
-    Parameters
-    ----------
-    decoder : "dot" | "mlp"
-        * "dot"  → InnerProductDecoder (no parameters, baseline)
-        * "mlp"  → two‑layer MLP over [z_i ‖ z_j]
-    mlp_hidden : int, optional
-        hidden size for the MLPDecoder; defaults to *latent_dim*.
-    """
+               mlp_hidden: int | None = None,
+               gnn_hidden: int | None = None,
+               gnn_layers: int = 2) -> VGAE:
     enc = SimpleMPNNEncoder(node_feature_dim, hidden_dim, latent_dim, num_rounds)
     if decoder == "dot":
-        dec = InnerProductDecoder()
+        dec: nn.Module = InnerProductDecoder()
     elif decoder == "mlp":
-        dec = MLPDecoder(latent_dim, hidden_dim=mlp_hidden)
+        dec = MLPDecoder(latent_dim, mlp_hidden)
+    elif decoder == "gnn":
+        dec = GNNDecoder(latent_dim, gnn_hidden, gnn_layers)
     else:
-        raise ValueError("decoder must be 'dot' or 'mlp'")
-
-    model = VGAE(encoder=enc, decoder=dec)
-    model.latent_dim = latent_dim  # convenience attribute
+        raise ValueError("decoder must be 'dot', 'mlp', or 'gnn'")
+    model = VGAE(enc, decoder=dec)
+    model.latent_dim = latent_dim
     return model
 
 # -----------------------------------------------------------------------------
@@ -150,9 +180,11 @@ def train(model: VGAE,
           dataset,
           epochs: int = 500,
           lr: float = 1e-3,
+          beta: float = 1.0,
+          neg_factor: float = 1.0,
           device: str | torch.device = "cpu",
           checkpoint: str | Path | None = None,
-          log_every: int = 20,
+          log_every: int = 5,
           lr_sched: str | None = "step"):
     """Train VGAE. Returns (model, loss_history). lr_sched ∈ {None,'step','plateau'}."""
 
@@ -170,11 +202,11 @@ def train(model: VGAE,
             z = model.encode(data.x, data.edge_index)
             pos_edge_index = data.edge_index
             neg_edge_index = negative_sampling(pos_edge_index, data.num_nodes,
-                                               num_neg_samples=pos_edge_index.size(1),
+                                               num_neg_samples=pos_edge_index.size(1) * neg_factor,
                                                method="sparse")
             recon = model.recon_loss(z, pos_edge_index, neg_edge_index)
             kl = model.kl_loss() / data.num_nodes
-            loss = recon + kl
+            loss = recon + beta * kl
             loss.backward()
             opt.step()
         
@@ -209,8 +241,16 @@ def sample_graph(n_nodes: int, model: VGAE | None = None, latent_dim: int | None
     with torch.no_grad():
         z = torch.randn(n_nodes, latent_dim, device=dev)
         probs = torch.sigmoid(model.decoder.forward_all(z) if model else z @ z.T)
-        adj = torch.bernoulli(probs).int()
-        return nx.from_numpy_array(adj.numpy())
+        # zero out diagonal so no self‐loops
+        probs = probs.clone().fill_diagonal_(0.0)
+        # sample only upper‐triangle (i<j)
+        tri_idx = torch.triu_indices(n_nodes, n_nodes, offset=1)
+        samples = torch.bernoulli(probs[tri_idx[0], tri_idx[1]])
+        # build sparse adj and mirror
+        adj = torch.zeros_like(probs, dtype=torch.int)
+        adj[tri_idx[0], tri_idx[1]] = samples.int()
+        adj = adj + adj.T
+        return nx.from_numpy_array(adj.cpu().numpy())
 
 def sample_graphs(model: VGAE, num_graphs: int, N_sampler: Callable[[], int] | None = None,
                   fixed_n_nodes: int | None = None, threshold: float = 0.5,
@@ -243,12 +283,12 @@ def load_model(model: VGAE, path: str | Path, map_location: str | torch.device =
 # Plotting utility
 # -----------------------------------------------------------------------------
 
-def plot_loss(history: Sequence[float], *, save: bool = True, filename: str = "vgae_loss.png"):
+def plot_loss(history: Sequence[float], path, *, save: bool = True, filename: str = "vgae_loss.png"):
     """Line plot of loss history; optionally saves to *filename*."""
     plt.figure()
     plt.plot(range(1, len(history) + 1), history)
     plt.xlabel("Epoch"); plt.ylabel("Loss (ELBO)"); plt.title("VGAE Training Loss"); plt.tight_layout()
     if save:
-        plt.savefig(f"figures/{filename}")
+        plt.savefig(f"{path}/{filename}")
         print(f"📈  Loss curve saved to {filename}")
     plt.show()

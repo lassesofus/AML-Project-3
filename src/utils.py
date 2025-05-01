@@ -6,8 +6,9 @@ import pdb
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-def graph_to_nx(N, edge_index):
+def graph_to_nx(N, edge_index, node_features=None):
     """
     Convert edge_index and number of nodes into a NetworkX graph.
     Assumes edge_index is of shape [2, num_edges].
@@ -19,6 +20,9 @@ def graph_to_nx(N, edge_index):
     G = nx.Graph()
     G.add_nodes_from(range(N))
     G.add_edges_from(edges)
+    # Add node features as node attributes
+    if node_features is not None:
+        nx.set_node_attributes(G, {i: node_features[i].tolist() for i in range(N)}, 'features')
     return G
 
 def compute_graph_hash(N, edge_index):
@@ -149,7 +153,7 @@ def get_graph_stats(graphs):
     
     return (degrees, clustering, centrality)
 
-def plot_histograms(baseline_stats, empirical_stats, deep_stats):
+def plot_histograms(baseline_stats, empirical_stats, deep_stats, path):
 
     baseline_degrees, baseline_clustering, baseline_centrality = baseline_stats
     empirical_degrees, empirical_clustering, empirical_centrality = empirical_stats
@@ -211,9 +215,8 @@ def plot_histograms(baseline_stats, empirical_stats, deep_stats):
              fontsize=14, fontweight="bold")
 
     plt.tight_layout(rect=[0.03, 0, 1, 1])
-    plt.savefig('figures/graph_histograms.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{path}/graph_histograms.png', dpi=300, bbox_inches='tight')
     plt.show()
-
 
 def print_latex_table(results: dict) -> str:
     """
@@ -237,7 +240,7 @@ Deep Generative Model & {deep_novel:.2f} & {deep_unique:.2f} & {deep_novelunique
         deep_novelunique=results['deep'][2]
     )
 
-def plot_graphs(graphs, title="Graphs"):
+def plot_graphs(graphs, path, title="Graphs"):
     """
     Plot a list of graphs using matplotlib in a 3x3 grid.
     """
@@ -248,5 +251,19 @@ def plot_graphs(graphs, title="Graphs"):
         axes[i].set_title(f"Graph {i + 1}")
     fig.suptitle(title)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(f"figures/{title}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{path}/{title}.png", dpi=300, bbox_inches='tight')
     plt.show()
+
+def get_exp_name(args):
+    return f"{args.decoder}_hd{args.hidden_dim}_ld{args.latent_dim}_nr{args.num_rounds}_ep{args.epochs}"
+
+def prepare_experiment_dirs(args):
+    exp_name = get_exp_name(args)
+    output_dir = f"./experiments/{exp_name}"
+    os.makedirs(output_dir, exist_ok=True)
+    args.checkpoint = f"{output_dir}/model.pt"
+    args.log_dir = f"{output_dir}/logs"
+    args.fig_dir = f"{output_dir}/figures"
+    os.makedirs(args.log_dir, exist_ok=True)
+    os.makedirs(args.fig_dir, exist_ok=True)
+    return args
