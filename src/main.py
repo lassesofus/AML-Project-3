@@ -1,104 +1,85 @@
+import os
+import pdb
+from matplotlib import pyplot as plt
 import torch
 from torch_geometric.datasets import TUDataset
-import random
-from erdos_renyi import ErdosRenyiSampler
-from utils import compute_metrics, graph_to_nx, get_graph_stats, plot_histograms, plot_graphs
+from torch_geometric.loader import DataLoader
+
+from graph_vae import GraphVAE, GraphEncoder, GRANDecoder,SimpleMLPDecoder, degree_loss_from_batch
 from tqdm import tqdm
-import pdb
-from networkx.algorithms import weisfeiler_lehman_graph_hash
-from VAE import build_vgae, train, plot_loss, load_model, empirical_N_sampler, sample_graphs
+import torch.nn.functional as F
 
-# Device
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-# Load the MUTAG dataset
+# Configs
+device = 'cuda'
 dataset = TUDataset(root='./data/', name='MUTAG').to(device)
-node_feature_dim = dataset.num_features
-# Convert to NetworkX graphs
-empirical_graphs = [graph_to_nx(data.num_nodes, data.edge_index) for data in dataset]
+node_feature_dim = dataset.num_node_features  # should be 7
+latent_dim = 16
+batch_size = 16
+save_path = './models/graph_vae.pt'
+alpha = 0
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-# Plot some of the empirical graphs
-plot_graphs(empirical_graphs, title='Empirical Graphs')
+# Compute empirical distribution of the number of nodes in the dataset
+num_nodes_list = [data.num_nodes for data in dataset]
+unique_node_counts, counts = torch.unique(torch.tensor(num_nodes_list), return_counts=True)
+node_count_distribution = counts.float() / counts.sum()  # Normalize to get probabilities
+max_nodes = unique_node_counts.max().item()  # Maximum number of nodes in the dataset
 
-# Set seed for reproducibility
-torch.manual_seed(0)
-random.seed(0)
+def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt', loss_plot_path='loss_curve.png'):
+    model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-# Initialize the Erdös-Rényi (ER) sampler 
-ER_sampler = ErdosRenyiSampler(dataset)
+    best_loss = float('inf')
+    loss_history = []
+    with tqdm(range(1, epochs + 1), desc="Training Epochs") as pbar:
+        for epoch in pbar:
+            model.train()
+            total_loss = 0
 
-#Load the training WL hashes 
-with open('training_hashes.txt', 'r') as f:
-    training_hashes = {line.strip() for line in f}
-print(f"Loaded {len(training_hashes)} training hashes.")
+            for batch in dataloader:
+                batch = batch.to(device)
+                # Compute num_nodes_per_graph: count nodes per graph
+                num_nodes_per_graph = torch.bincount(batch.batch)
+                optimizer.zero_grad()
+                out = model(batch, num_nodes_per_graph)
+                deg_loss = degree_loss_from_batch(out["recon_data"], batch, max_nodes=vae.decoder.max_nodes)
 
-# Sample 1000 graphs from ER and get their WL hashes
-baseline_graphs = ER_sampler.sample_graphs(num_samples=1000)
-baseline_sampled_hashes = []
-for data in tqdm(baseline_graphs):
-    sampled_hash = weisfeiler_lehman_graph_hash(data)
-    baseline_sampled_hashes.append(sampled_hash)
+                loss = out["loss"] +alpha * deg_loss
+                optimizer.step()
+                total_loss += loss.item() * batch.num_graphs
 
-# Plot the sampled graphs
-plot_graphs(baseline_graphs, title='Baseline Graphs')
+            avg_loss = total_loss / len(dataloader.dataset)
+            loss_history.append(avg_loss)
+            pbar.set_postfix({'Loss': f'{avg_loss:.4f}', 'recon_loss': f'{out["loss"].item():.4f}', 'deg_loss': f'{deg_loss.item():.4f}'})
 
-# VAE with node-level latents
-# VGAE = build_vgae(node_feature_dim=node_feature_dim, hidden_dim=64, latent_dim=32, num_rounds=5, decoder="mlp").to(device)
-# model, hist = train(VGAE, dataset, epochs=500, checkpoint='./models/vgae_mutag.pt', device=device)
-# plot_loss(hist)
+            # Save best model
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                torch.save({
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'epoch': epoch,
+                    'loss': best_loss,
+                }, save_path)
+                pbar.set_postfix({'Loss': f'{avg_loss:.4f}', 'Best Loss': f'{best_loss:.4f}'})
 
-model_loaded = build_vgae(node_feature_dim=node_feature_dim, hidden_dim=64, latent_dim=32, num_rounds=5, decoder="mlp").to(device)     
-load_model(model_loaded, './models/vgae_mutag.pt', map_location=device) 
+    # Plot loss curve
+    plt.figure()
+    plt.plot(range(1, epochs + 1), loss_history, label='Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('GraphVAE Training Loss Curve')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(loss_plot_path)
+    plt.close()
+    print(f"📉 Saved loss curve to {loss_plot_path}")
 
-sizes = empirical_N_sampler(TUDataset(root='data', name='MUTAG'))
-deep_graphs = sample_graphs(model_loaded, num_graphs=1000, N_sampler=sizes)
+encoder = GraphEncoder(node_feature_dim,latent_dim,latent_dim).to(device)
+decoder = SimpleMLPDecoder(latent_dim,latent_dim,max_nodes).to(device)
 
-# Plot some of the graphs sampled from the VGAE
-plot_graphs(deep_graphs, title='Deep Graphs')
+vae = GraphVAE(encoder, decoder, latent_dim)
 
-deep_graphs_hashes = []
-for data in tqdm(deep_graphs):
-    sampled_hash = weisfeiler_lehman_graph_hash(data)
-    deep_graphs_hashes.append(sampled_hash)
-
-# Compute metrics
-results = {}
-for model in ['baseline', 'deep']:
-    if model == 'baseline':
-        sampled_hashes = baseline_sampled_hashes
-    else:
-        sampled_hashes = deep_graphs_hashes
-
-    novel_percentage, unique_percentage, novel_unique_percentage = compute_metrics(sampled_hashes, training_hashes)
-    results[model] = (novel_percentage, unique_percentage, novel_unique_percentage)
-
-print(f"Novel: {results['baseline'][0]:.2f}% (Baseline), {results['deep'][0]:.2f}% (VGAE)")
-print(f"Unique: {results['baseline'][1]:.2f}% (Baseline), {results['deep'][1]:.2f}% (VGAE)")
-print(f"Novel and Unique: {results['baseline'][2]:.2f}% (Baseline), {results['deep'][2]:.2f}% (VGAE)")
-
-# Compute and print graph statistics
-empirical_stats = get_graph_stats(empirical_graphs)
-baseline_stats = get_graph_stats(baseline_graphs)
-deep_stats = get_graph_stats(deep_graphs)
-
-plot_histograms(baseline_stats, empirical_stats, deep_stats)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Train and save best model
+train_vae(vae, dataloader, epochs=100, save_path=save_path)
