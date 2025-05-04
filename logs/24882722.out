@@ -1,0 +1,281 @@
+Experiment arguments: {'mode': 'train', 'epochs': 500, 'lr': 0.0005, 'beta': 5, 'neg_factor': 3.0, 'device': 'cuda', 'hidden_dim': 64, 'latent_dim': 32, 'num_enc_MP_rounds': 3, 'dec_layers': 1, 'heads': 4, 'decoder': 'gat', 'checkpoint': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/model.pt', 'log_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/logs', 'fig_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/figures'}
+Loaded 171 training hashes.
+cuda
+Device: cuda
+Training VGAE model...
+Epoch 0001 │ loss=2.9420 │ recon=1.371 │ kl=2.113 │ β=0.02 │ lr=5.0e-04
+Epoch 0002 │ loss=1.4951 │ recon=1.414 │ kl=2.331 │ β=0.04 │ lr=5.0e-04
+Epoch 0003 │ loss=1.5044 │ recon=1.264 │ kl=2.262 │ β=0.06 │ lr=5.0e-04
+Epoch 0004 │ loss=1.4240 │ recon=1.221 │ kl=2.225 │ β=0.08 │ lr=5.0e-04
+Epoch 0005 │ loss=1.4162 │ recon=1.325 │ kl=2.038 │ β=0.10 │ lr=5.0e-04
+Epoch 0006 │ loss=1.4317 │ recon=1.283 │ kl=1.816 │ β=0.12 │ lr=5.0e-04
+Epoch 0007 │ loss=1.4533 │ recon=1.108 │ kl=1.760 │ β=0.14 │ lr=5.0e-04
+Epoch 0008 │ loss=1.4769 │ recon=1.142 │ kl=1.728 │ β=0.16 │ lr=5.0e-04
+Epoch 0009 │ loss=1.4727 │ recon=1.112 │ kl=1.683 │ β=0.18 │ lr=5.0e-04
+Epoch 0010 │ loss=1.4742 │ recon=1.211 │ kl=1.562 │ β=0.20 │ lr=5.0e-04
+Epoch 0011 │ loss=1.4675 │ recon=1.152 │ kl=1.603 │ β=0.22 │ lr=5.0e-04
+Epoch 0012 │ loss=1.4696 │ recon=1.173 │ kl=1.477 │ β=0.24 │ lr=5.0e-04
+Epoch 0013 │ loss=1.4843 │ recon=1.192 │ kl=1.475 │ β=0.26 │ lr=5.0e-04
+Epoch 0014 │ loss=1.4899 │ recon=1.179 │ kl=1.374 │ β=0.28 │ lr=5.0e-04
+Epoch 0015 │ loss=1.5271 │ recon=1.137 │ kl=1.316 │ β=0.30 │ lr=5.0e-04
+Epoch 0016 │ loss=1.5190 │ recon=1.102 │ kl=1.325 │ β=0.32 │ lr=5.0e-04
+Epoch 0017 │ loss=1.5575 │ recon=1.141 │ kl=1.341 │ β=0.34 │ lr=5.0e-04
+Epoch 0018 │ loss=1.5557 │ recon=1.387 │ kl=1.271 │ β=0.36 │ lr=5.0e-04
+Epoch 0019 │ loss=1.5575 │ recon=1.145 │ kl=1.176 │ β=0.38 │ lr=5.0e-04
+Epoch 0020 │ loss=1.5712 │ recon=1.166 │ kl=1.206 │ β=0.40 │ lr=5.0e-04
+Epoch 0021 │ loss=1.5920 │ recon=1.190 │ kl=1.169 │ β=0.42 │ lr=5.0e-04
+Epoch 0022 │ loss=1.6228 │ recon=1.288 │ kl=1.175 │ β=0.44 │ lr=5.0e-04
+Epoch 0023 │ loss=1.6285 │ recon=1.048 │ kl=1.044 │ β=0.46 │ lr=5.0e-04
+Epoch 0024 │ loss=1.6215 │ recon=1.029 │ kl=1.067 │ β=0.48 │ lr=5.0e-04
+Epoch 0025 │ loss=1.6182 │ recon=1.073 │ kl=0.986 │ β=0.50 │ lr=5.0e-04
+Epoch 0026 │ loss=1.6418 │ recon=1.076 │ kl=1.038 │ β=0.52 │ lr=5.0e-04
+Epoch 0027 │ loss=1.6692 │ recon=1.026 │ kl=1.026 │ β=0.54 │ lr=5.0e-04
+Epoch 0028 │ loss=1.6709 │ recon=1.277 │ kl=0.958 │ β=0.56 │ lr=5.0e-04
+Epoch 0029 │ loss=1.6809 │ recon=1.183 │ kl=0.964 │ β=0.58 │ lr=5.0e-04
+Epoch 0030 │ loss=1.7073 │ recon=0.946 │ kl=0.944 │ β=0.60 │ lr=5.0e-04
+Epoch 0031 │ loss=1.7179 │ recon=1.231 │ kl=0.898 │ β=0.62 │ lr=5.0e-04
+Epoch 0032 │ loss=1.7058 │ recon=1.034 │ kl=0.888 │ β=0.64 │ lr=5.0e-04
+Epoch 0033 │ loss=1.7360 │ recon=1.241 │ kl=0.906 │ β=0.66 │ lr=5.0e-04
+Epoch 0034 │ loss=1.7285 │ recon=0.952 │ kl=0.880 │ β=0.68 │ lr=5.0e-04
+Epoch 0035 │ loss=1.7364 │ recon=1.021 │ kl=0.858 │ β=0.70 │ lr=5.0e-04
+Epoch 0036 │ loss=1.7526 │ recon=1.248 │ kl=0.863 │ β=0.72 │ lr=5.0e-04
+Epoch 0037 │ loss=1.7658 │ recon=1.077 │ kl=0.872 │ β=0.74 │ lr=5.0e-04
+Epoch 0038 │ loss=1.7865 │ recon=0.791 │ kl=0.855 │ β=0.76 │ lr=5.0e-04
+Epoch 0039 │ loss=1.8145 │ recon=1.155 │ kl=0.830 │ β=0.78 │ lr=5.0e-04
+Epoch 0040 │ loss=1.8235 │ recon=1.221 │ kl=0.796 │ β=0.80 │ lr=5.0e-04
+Epoch 0041 │ loss=1.8132 │ recon=1.130 │ kl=0.813 │ β=0.82 │ lr=5.0e-04
+Epoch 0042 │ loss=1.8323 │ recon=0.822 │ kl=0.840 │ β=0.84 │ lr=5.0e-04
+Epoch 0043 │ loss=1.8346 │ recon=1.437 │ kl=0.831 │ β=0.86 │ lr=5.0e-04
+Epoch 0044 │ loss=1.8383 │ recon=1.150 │ kl=0.794 │ β=0.88 │ lr=5.0e-04
+Epoch 0045 │ loss=1.8721 │ recon=1.702 │ kl=0.751 │ β=0.90 │ lr=5.0e-04
+Epoch 0046 │ loss=1.8427 │ recon=1.048 │ kl=0.747 │ β=0.92 │ lr=5.0e-04
+Epoch 0047 │ loss=1.8948 │ recon=0.986 │ kl=0.769 │ β=0.94 │ lr=5.0e-04
+Epoch 0048 │ loss=1.8940 │ recon=1.393 │ kl=0.728 │ β=0.96 │ lr=5.0e-04
+Epoch 0049 │ loss=1.8921 │ recon=1.030 │ kl=0.721 │ β=0.98 │ lr=5.0e-04
+Epoch 0050 │ loss=1.9032 │ recon=1.083 │ kl=0.747 │ β=1.00 │ lr=5.0e-04
+Epoch 0051 │ loss=1.8813 │ recon=1.259 │ kl=0.750 │ β=1.00 │ lr=5.0e-04
+Epoch 0052 │ loss=1.8909 │ recon=1.099 │ kl=0.720 │ β=1.00 │ lr=5.0e-04
+Epoch 0053 │ loss=1.9372 │ recon=1.069 │ kl=0.739 │ β=1.00 │ lr=5.0e-04
+Epoch 0054 │ loss=1.8952 │ recon=1.238 │ kl=0.701 │ β=1.00 │ lr=5.0e-04
+Epoch 0055 │ loss=1.8958 │ recon=1.524 │ kl=0.690 │ β=1.00 │ lr=5.0e-04
+Epoch 0056 │ loss=1.8768 │ recon=1.543 │ kl=0.694 │ β=1.00 │ lr=2.5e-04
+Epoch 0057 │ loss=1.8884 │ recon=1.143 │ kl=0.694 │ β=1.00 │ lr=2.5e-04
+Epoch 0058 │ loss=1.8573 │ recon=1.394 │ kl=0.718 │ β=1.00 │ lr=2.5e-04
+Epoch 0059 │ loss=1.8724 │ recon=0.988 │ kl=0.697 │ β=1.00 │ lr=2.5e-04
+Epoch 0060 │ loss=1.8680 │ recon=1.517 │ kl=0.684 │ β=1.00 │ lr=2.5e-04
+Epoch 0061 │ loss=1.8532 │ recon=1.101 │ kl=0.688 │ β=1.00 │ lr=2.5e-04
+Epoch 0062 │ loss=1.8542 │ recon=1.698 │ kl=0.698 │ β=1.00 │ lr=2.5e-04
+Epoch 0063 │ loss=1.8754 │ recon=1.481 │ kl=0.686 │ β=1.00 │ lr=2.5e-04
+Epoch 0064 │ loss=1.8851 │ recon=0.914 │ kl=0.698 │ β=1.00 │ lr=2.5e-04
+Epoch 0065 │ loss=1.8874 │ recon=0.966 │ kl=0.695 │ β=1.00 │ lr=2.5e-04
+Epoch 0066 │ loss=1.8490 │ recon=0.954 │ kl=0.702 │ β=1.00 │ lr=2.5e-04
+Epoch 0067 │ loss=1.8547 │ recon=0.936 │ kl=0.697 │ β=1.00 │ lr=2.5e-04
+Epoch 0068 │ loss=1.8668 │ recon=1.234 │ kl=0.716 │ β=1.00 │ lr=2.5e-04
+Epoch 0069 │ loss=1.8769 │ recon=1.185 │ kl=0.719 │ β=1.00 │ lr=2.5e-04
+Epoch 0070 │ loss=1.8298 │ recon=1.193 │ kl=0.656 │ β=1.00 │ lr=2.5e-04
+Epoch 0071 │ loss=1.8295 │ recon=0.808 │ kl=0.687 │ β=1.00 │ lr=2.5e-04
+Epoch 0072 │ loss=1.8566 │ recon=1.040 │ kl=0.711 │ β=1.00 │ lr=2.5e-04
+Epoch 0073 │ loss=1.8212 │ recon=1.408 │ kl=0.675 │ β=1.00 │ lr=2.5e-04
+Epoch 0074 │ loss=1.8609 │ recon=0.987 │ kl=0.698 │ β=1.00 │ lr=2.5e-04
+Epoch 0075 │ loss=1.8337 │ recon=1.229 │ kl=0.679 │ β=1.00 │ lr=2.5e-04
+Epoch 0076 │ loss=1.8336 │ recon=1.202 │ kl=0.697 │ β=1.00 │ lr=2.5e-04
+Epoch 0077 │ loss=1.8387 │ recon=1.255 │ kl=0.668 │ β=1.00 │ lr=2.5e-04
+Epoch 0078 │ loss=1.8236 │ recon=1.063 │ kl=0.701 │ β=1.00 │ lr=2.5e-04
+Epoch 0079 │ loss=1.8430 │ recon=1.197 │ kl=0.664 │ β=1.00 │ lr=2.5e-04
+Epoch 0080 │ loss=1.8773 │ recon=1.252 │ kl=0.733 │ β=1.00 │ lr=2.5e-04
+Epoch 0081 │ loss=1.8566 │ recon=0.937 │ kl=0.748 │ β=1.00 │ lr=2.5e-04
+Epoch 0082 │ loss=1.8295 │ recon=1.227 │ kl=0.687 │ β=1.00 │ lr=2.5e-04
+Epoch 0083 │ loss=1.8273 │ recon=1.160 │ kl=0.656 │ β=1.00 │ lr=2.5e-04
+Epoch 0084 │ loss=1.8217 │ recon=0.857 │ kl=0.662 │ β=1.00 │ lr=2.5e-04
+Epoch 0085 │ loss=1.8350 │ recon=0.933 │ kl=0.683 │ β=1.00 │ lr=2.5e-04
+Epoch 0086 │ loss=1.8032 │ recon=1.155 │ kl=0.684 │ β=1.00 │ lr=2.5e-04
+Epoch 0087 │ loss=1.8178 │ recon=0.993 │ kl=0.637 │ β=1.00 │ lr=2.5e-04
+Epoch 0088 │ loss=1.8150 │ recon=1.081 │ kl=0.696 │ β=1.00 │ lr=2.5e-04
+Epoch 0089 │ loss=1.8193 │ recon=0.920 │ kl=0.683 │ β=1.00 │ lr=2.5e-04
+Epoch 0090 │ loss=1.8201 │ recon=1.084 │ kl=0.661 │ β=1.00 │ lr=2.5e-04
+Epoch 0091 │ loss=1.8242 │ recon=1.189 │ kl=0.692 │ β=1.00 │ lr=2.5e-04
+Epoch 0092 │ loss=1.8125 │ recon=1.107 │ kl=0.673 │ β=1.00 │ lr=2.5e-04
+Epoch 0093 │ loss=1.8261 │ recon=1.162 │ kl=0.666 │ β=1.00 │ lr=2.5e-04
+Epoch 0094 │ loss=1.8208 │ recon=0.978 │ kl=0.668 │ β=1.00 │ lr=2.5e-04
+Epoch 0095 │ loss=1.8175 │ recon=1.459 │ kl=0.657 │ β=1.00 │ lr=2.5e-04
+Epoch 0096 │ loss=1.8462 │ recon=1.189 │ kl=0.694 │ β=1.00 │ lr=2.5e-04
+Epoch 0097 │ loss=1.8266 │ recon=1.081 │ kl=0.691 │ β=1.00 │ lr=2.5e-04
+Epoch 0098 │ loss=1.8243 │ recon=0.706 │ kl=0.693 │ β=1.00 │ lr=2.5e-04
+Epoch 0099 │ loss=1.8171 │ recon=1.373 │ kl=0.694 │ β=1.00 │ lr=2.5e-04
+Epoch 0100 │ loss=1.8259 │ recon=0.821 │ kl=0.659 │ β=1.00 │ lr=2.5e-04
+Epoch 0101 │ loss=1.8068 │ recon=1.202 │ kl=0.683 │ β=1.00 │ lr=2.5e-04
+Epoch 0102 │ loss=1.7968 │ recon=1.334 │ kl=0.673 │ β=1.00 │ lr=2.5e-04
+Epoch 0103 │ loss=1.8147 │ recon=1.206 │ kl=0.664 │ β=1.00 │ lr=2.5e-04
+Epoch 0104 │ loss=1.7976 │ recon=1.024 │ kl=0.674 │ β=1.00 │ lr=2.5e-04
+Epoch 0105 │ loss=1.8053 │ recon=1.321 │ kl=0.691 │ β=1.00 │ lr=2.5e-04
+Epoch 0106 │ loss=1.7977 │ recon=0.759 │ kl=0.670 │ β=1.00 │ lr=2.5e-04
+Epoch 0107 │ loss=1.8029 │ recon=1.503 │ kl=0.683 │ β=1.00 │ lr=1.3e-04
+Epoch 0108 │ loss=1.8006 │ recon=1.181 │ kl=0.655 │ β=1.00 │ lr=1.3e-04
+Epoch 0109 │ loss=1.8170 │ recon=0.906 │ kl=0.701 │ β=1.00 │ lr=1.3e-04
+Epoch 0110 │ loss=1.8149 │ recon=1.255 │ kl=0.689 │ β=1.00 │ lr=1.3e-04
+Epoch 0111 │ loss=1.7956 │ recon=1.645 │ kl=0.673 │ β=1.00 │ lr=1.3e-04
+Epoch 0112 │ loss=1.7988 │ recon=1.716 │ kl=0.666 │ β=1.00 │ lr=1.3e-04
+Epoch 0113 │ loss=1.7957 │ recon=1.015 │ kl=0.693 │ β=1.00 │ lr=1.3e-04
+Epoch 0114 │ loss=1.7860 │ recon=1.097 │ kl=0.683 │ β=1.00 │ lr=1.3e-04
+Epoch 0115 │ loss=1.7893 │ recon=0.812 │ kl=0.682 │ β=1.00 │ lr=1.3e-04
+Epoch 0116 │ loss=1.7826 │ recon=1.033 │ kl=0.666 │ β=1.00 │ lr=1.3e-04
+Epoch 0117 │ loss=1.8030 │ recon=1.123 │ kl=0.669 │ β=1.00 │ lr=1.3e-04
+Epoch 0118 │ loss=1.7953 │ recon=1.346 │ kl=0.667 │ β=1.00 │ lr=1.3e-04
+Epoch 0119 │ loss=1.7822 │ recon=1.066 │ kl=0.654 │ β=1.00 │ lr=1.3e-04
+Epoch 0120 │ loss=1.7974 │ recon=1.124 │ kl=0.665 │ β=1.00 │ lr=1.3e-04
+Epoch 0121 │ loss=1.8054 │ recon=1.213 │ kl=0.674 │ β=1.00 │ lr=1.3e-04
+Epoch 0122 │ loss=1.8088 │ recon=1.272 │ kl=0.684 │ β=1.00 │ lr=1.3e-04
+Epoch 0123 │ loss=1.8095 │ recon=0.999 │ kl=0.683 │ β=1.00 │ lr=1.3e-04
+Epoch 0124 │ loss=1.7927 │ recon=1.249 │ kl=0.674 │ β=1.00 │ lr=1.3e-04
+Epoch 0125 │ loss=1.8049 │ recon=1.114 │ kl=0.690 │ β=1.00 │ lr=1.3e-04
+Epoch 0126 │ loss=1.7698 │ recon=1.428 │ kl=0.665 │ β=1.00 │ lr=1.3e-04
+Epoch 0127 │ loss=1.8060 │ recon=0.982 │ kl=0.681 │ β=1.00 │ lr=1.3e-04
+Epoch 0128 │ loss=1.8375 │ recon=1.334 │ kl=0.681 │ β=1.00 │ lr=1.3e-04
+Epoch 0129 │ loss=1.8089 │ recon=1.151 │ kl=0.689 │ β=1.00 │ lr=1.3e-04
+Epoch 0130 │ loss=1.8183 │ recon=0.937 │ kl=0.679 │ β=1.00 │ lr=1.3e-04
+Epoch 0131 │ loss=1.8310 │ recon=1.228 │ kl=0.706 │ β=1.00 │ lr=1.3e-04
+Epoch 0132 │ loss=1.7862 │ recon=1.299 │ kl=0.678 │ β=1.00 │ lr=1.3e-04
+Epoch 0133 │ loss=1.7891 │ recon=1.068 │ kl=0.699 │ β=1.00 │ lr=1.3e-04
+Epoch 0134 │ loss=1.8244 │ recon=1.271 │ kl=0.703 │ β=1.00 │ lr=1.3e-04
+Epoch 0135 │ loss=1.7732 │ recon=1.213 │ kl=0.668 │ β=1.00 │ lr=1.3e-04
+Epoch 0136 │ loss=1.8037 │ recon=1.110 │ kl=0.674 │ β=1.00 │ lr=1.3e-04
+Epoch 0137 │ loss=1.7755 │ recon=0.960 │ kl=0.672 │ β=1.00 │ lr=1.3e-04
+Epoch 0138 │ loss=1.7941 │ recon=1.349 │ kl=0.691 │ β=1.00 │ lr=1.3e-04
+Epoch 0139 │ loss=1.8178 │ recon=0.908 │ kl=0.695 │ β=1.00 │ lr=1.3e-04
+Epoch 0140 │ loss=1.7794 │ recon=1.117 │ kl=0.684 │ β=1.00 │ lr=1.3e-04
+Epoch 0141 │ loss=1.8064 │ recon=1.529 │ kl=0.709 │ β=1.00 │ lr=1.3e-04
+Epoch 0142 │ loss=1.7681 │ recon=1.192 │ kl=0.695 │ β=1.00 │ lr=1.3e-04
+Epoch 0143 │ loss=1.7669 │ recon=1.114 │ kl=0.669 │ β=1.00 │ lr=1.3e-04
+Epoch 0144 │ loss=1.7822 │ recon=1.449 │ kl=0.676 │ β=1.00 │ lr=1.3e-04
+Epoch 0145 │ loss=1.7705 │ recon=0.957 │ kl=0.667 │ β=1.00 │ lr=1.3e-04
+Epoch 0146 │ loss=1.7696 │ recon=1.256 │ kl=0.676 │ β=1.00 │ lr=1.3e-04
+Epoch 0147 │ loss=1.7880 │ recon=1.223 │ kl=0.683 │ β=1.00 │ lr=1.3e-04
+Epoch 0148 │ loss=1.7816 │ recon=1.137 │ kl=0.673 │ β=1.00 │ lr=1.3e-04
+Epoch 0149 │ loss=1.8105 │ recon=0.900 │ kl=0.692 │ β=1.00 │ lr=1.3e-04
+Epoch 0150 │ loss=1.7793 │ recon=0.676 │ kl=0.667 │ β=1.00 │ lr=1.3e-04
+Epoch 0151 │ loss=1.7756 │ recon=1.635 │ kl=0.677 │ β=1.00 │ lr=1.3e-04
+Epoch 0152 │ loss=1.7975 │ recon=1.232 │ kl=0.678 │ β=1.00 │ lr=1.3e-04
+Epoch 0153 │ loss=1.8067 │ recon=1.370 │ kl=0.701 │ β=1.00 │ lr=1.3e-04
+Epoch 0154 │ loss=1.7820 │ recon=0.773 │ kl=0.677 │ β=1.00 │ lr=1.3e-04
+Epoch 0155 │ loss=1.7870 │ recon=1.357 │ kl=0.695 │ β=1.00 │ lr=1.3e-04
+Epoch 0156 │ loss=1.8093 │ recon=1.220 │ kl=0.666 │ β=1.00 │ lr=1.3e-04
+Epoch 0157 │ loss=1.7793 │ recon=1.188 │ kl=0.685 │ β=1.00 │ lr=1.3e-04
+Epoch 0158 │ loss=1.7683 │ recon=1.172 │ kl=0.691 │ β=1.00 │ lr=6.3e-05
+Epoch 0159 │ loss=1.7726 │ recon=1.308 │ kl=0.668 │ β=1.00 │ lr=6.3e-05
+Epoch 0160 │ loss=1.7885 │ recon=0.835 │ kl=0.661 │ β=1.00 │ lr=6.3e-05
+Epoch 0161 │ loss=1.7738 │ recon=0.849 │ kl=0.693 │ β=1.00 │ lr=6.3e-05
+Epoch 0162 │ loss=1.7663 │ recon=1.380 │ kl=0.669 │ β=1.00 │ lr=6.3e-05
+Epoch 0163 │ loss=1.7868 │ recon=0.952 │ kl=0.674 │ β=1.00 │ lr=6.3e-05
+Epoch 0164 │ loss=1.7692 │ recon=0.818 │ kl=0.671 │ β=1.00 │ lr=6.3e-05
+Epoch 0165 │ loss=1.7671 │ recon=0.847 │ kl=0.673 │ β=1.00 │ lr=6.3e-05
+Epoch 0166 │ loss=1.7633 │ recon=1.395 │ kl=0.666 │ β=1.00 │ lr=6.3e-05
+Epoch 0167 │ loss=1.7664 │ recon=1.137 │ kl=0.655 │ β=1.00 │ lr=6.3e-05
+Epoch 0168 │ loss=1.7707 │ recon=1.339 │ kl=0.683 │ β=1.00 │ lr=6.3e-05
+Epoch 0169 │ loss=1.7807 │ recon=0.924 │ kl=0.675 │ β=1.00 │ lr=6.3e-05
+Epoch 0170 │ loss=1.7761 │ recon=0.908 │ kl=0.662 │ β=1.00 │ lr=6.3e-05
+Epoch 0171 │ loss=1.7461 │ recon=0.879 │ kl=0.656 │ β=1.00 │ lr=6.3e-05
+Epoch 0172 │ loss=1.7806 │ recon=1.712 │ kl=0.670 │ β=1.00 │ lr=6.3e-05
+Epoch 0173 │ loss=1.7856 │ recon=1.358 │ kl=0.688 │ β=1.00 │ lr=6.3e-05
+Epoch 0174 │ loss=1.7893 │ recon=1.331 │ kl=0.687 │ β=1.00 │ lr=6.3e-05
+Epoch 0175 │ loss=1.7626 │ recon=0.976 │ kl=0.677 │ β=1.00 │ lr=6.3e-05
+Epoch 0176 │ loss=1.7881 │ recon=0.988 │ kl=0.674 │ β=1.00 │ lr=6.3e-05
+Epoch 0177 │ loss=1.7733 │ recon=1.334 │ kl=0.671 │ β=1.00 │ lr=6.3e-05
+Epoch 0178 │ loss=1.7541 │ recon=1.011 │ kl=0.675 │ β=1.00 │ lr=6.3e-05
+Epoch 0179 │ loss=1.7686 │ recon=1.441 │ kl=0.682 │ β=1.00 │ lr=6.3e-05
+Epoch 0180 │ loss=1.7747 │ recon=1.036 │ kl=0.677 │ β=1.00 │ lr=6.3e-05
+Epoch 0181 │ loss=1.7737 │ recon=0.748 │ kl=0.672 │ β=1.00 │ lr=6.3e-05
+Epoch 0182 │ loss=1.7666 │ recon=1.202 │ kl=0.673 │ β=1.00 │ lr=6.3e-05
+Epoch 0183 │ loss=1.7672 │ recon=1.172 │ kl=0.661 │ β=1.00 │ lr=6.3e-05
+Epoch 0184 │ loss=1.7759 │ recon=0.981 │ kl=0.682 │ β=1.00 │ lr=6.3e-05
+Epoch 0185 │ loss=1.7773 │ recon=1.303 │ kl=0.664 │ β=1.00 │ lr=6.3e-05
+Epoch 0186 │ loss=1.7591 │ recon=0.952 │ kl=0.672 │ β=1.00 │ lr=6.3e-05
+Epoch 0187 │ loss=1.8016 │ recon=0.994 │ kl=0.689 │ β=1.00 │ lr=6.3e-05
+Epoch 0188 │ loss=1.7559 │ recon=1.029 │ kl=0.674 │ β=1.00 │ lr=6.3e-05
+Epoch 0189 │ loss=1.7719 │ recon=1.497 │ kl=0.671 │ β=1.00 │ lr=6.3e-05
+Epoch 0190 │ loss=1.7580 │ recon=1.198 │ kl=0.665 │ β=1.00 │ lr=6.3e-05
+Epoch 0191 │ loss=1.7557 │ recon=0.810 │ kl=0.660 │ β=1.00 │ lr=6.3e-05
+Epoch 0192 │ loss=1.7769 │ recon=0.945 │ kl=0.670 │ β=1.00 │ lr=6.3e-05
+Epoch 0193 │ loss=1.7817 │ recon=0.971 │ kl=0.667 │ β=1.00 │ lr=6.3e-05
+Epoch 0194 │ loss=1.7777 │ recon=1.264 │ kl=0.683 │ β=1.00 │ lr=6.3e-05
+Epoch 0195 │ loss=1.7468 │ recon=1.245 │ kl=0.672 │ β=1.00 │ lr=6.3e-05
+Epoch 0196 │ loss=1.7611 │ recon=1.145 │ kl=0.674 │ β=1.00 │ lr=6.3e-05
+Epoch 0197 │ loss=1.7825 │ recon=1.233 │ kl=0.670 │ β=1.00 │ lr=6.3e-05
+Epoch 0198 │ loss=1.7607 │ recon=1.011 │ kl=0.677 │ β=1.00 │ lr=6.3e-05
+Epoch 0199 │ loss=1.7940 │ recon=0.894 │ kl=0.679 │ β=1.00 │ lr=6.3e-05
+Epoch 0200 │ loss=1.7782 │ recon=1.120 │ kl=0.676 │ β=1.00 │ lr=6.3e-05
+Epoch 0201 │ loss=1.7614 │ recon=1.296 │ kl=0.670 │ β=1.00 │ lr=6.3e-05
+Epoch 0202 │ loss=1.7625 │ recon=1.008 │ kl=0.671 │ β=1.00 │ lr=6.3e-05
+Epoch 0203 │ loss=1.7674 │ recon=1.191 │ kl=0.658 │ β=1.00 │ lr=6.3e-05
+Epoch 0204 │ loss=1.7776 │ recon=0.929 │ kl=0.674 │ β=1.00 │ lr=6.3e-05
+Epoch 0205 │ loss=1.7824 │ recon=0.924 │ kl=0.689 │ β=1.00 │ lr=6.3e-05
+⏹️  Early stopping at epoch 205 (no improvement for 200 epochs).
+✅  Model saved to ./experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/model.pt
+📈  Loss curve saved to vgae_loss.png
+Novel: 100.00% (Baseline), 100.00% (VGAE)
+Unique: 100.00% (Baseline), 98.80% (VGAE)
+Novel and Unique: 100.00% (Baseline), 98.80% (VGAE)
+Computing node-level statistics...
+Computing node-level statistics...
+Computing node-level statistics...
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 24882722: <graph_generations> in cluster <dcc> Done
+
+Job <graph_generations> was submitted from host <n-62-20-1> by user <s185927> in cluster <dcc> at Sun May  4 07:26:48 2025
+Job was executed on host(s) <8*n-62-20-10>, in queue <gpuv100>, as user <s185927> in cluster <dcc> at Sun May  4 07:26:49 2025
+</zhome/e3/3/139772> was used as the home directory.
+</zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3> was used as the working directory.
+Started at Sun May  4 07:26:49 2025
+Terminated at Sun May  4 07:35:56 2025
+Results reported at Sun May  4 07:35:56 2025
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J graph_generations
+#BSUB -q gpuv100
+#BSUB -n 8
+#BSUB -o logs/%J.out
+#BSUB -e logs/%J.err
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 5:00
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=5GB]"
+# end of BSUB options
+
+module load cuda/11.8
+
+source ~/Desktop/AML/aml_new/bin/activate
+
+python -u src/main.py --mode 'train' --epochs 500 --lr 5e-4 --hidden_dim 64 --latent_dim 32 --num_enc_MP_rounds 3 --decoder gat  --neg_factor 3 --dec_layers 1 --heads 4 
+
+
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   525.00 sec.
+    Max Memory :                                 704 MB
+    Average Memory :                             628.00 MB
+    Total Requested Memory :                     40960.00 MB
+    Delta Memory :                               40256.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                11
+    Run time :                                   616 sec.
+    Turnaround time :                            548 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/24882722.err> for stderr output of this job.
+

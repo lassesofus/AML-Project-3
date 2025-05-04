@@ -1,0 +1,97 @@
+Experiment arguments: {'mode': 'train', 'epochs': 500, 'lr': 0.0005, 'beta': 5, 'neg_factor': 3.0, 'device': 'cuda', 'hidden_dim': 64, 'latent_dim': 32, 'num_enc_MP_rounds': 3, 'dec_layers': 1, 'heads': 4, 'decoder': 'gat', 'checkpoint': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/model.pt', 'log_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/logs', 'fig_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/figures'}
+Loaded 171 training hashes.
+cuda
+Device: cuda
+Training VGAE model...
+Epoch 0001 │ loss=2.9420 │ recon=1.371 │ kl=2.113 │ β=0.02 │ lr=5.0e-04
+Epoch 0010 │ loss=1.4742 │ recon=1.211 │ kl=1.562 │ β=0.20 │ lr=5.0e-04
+Epoch 0020 │ loss=1.5724 │ recon=1.171 │ kl=1.205 │ β=0.40 │ lr=5.0e-04
+Epoch 0030 │ loss=1.7078 │ recon=0.958 │ kl=0.942 │ β=0.60 │ lr=5.0e-04
+Epoch 0040 │ loss=1.8256 │ recon=1.227 │ kl=0.790 │ β=0.80 │ lr=5.0e-04
+Epoch 0050 │ loss=1.9060 │ recon=1.080 │ kl=0.737 │ β=1.00 │ lr=5.0e-04
+Epoch 0060 │ loss=1.8712 │ recon=1.506 │ kl=0.683 │ β=1.00 │ lr=2.5e-04
+Epoch 0070 │ loss=1.8307 │ recon=1.206 │ kl=0.660 │ β=1.00 │ lr=2.5e-04
+Epoch 0080 │ loss=1.8809 │ recon=1.310 │ kl=0.732 │ β=1.00 │ lr=2.5e-04
+Epoch 0090 │ loss=1.8239 │ recon=1.081 │ kl=0.663 │ β=1.00 │ lr=2.5e-04
+Epoch 0100 │ loss=1.8302 │ recon=0.811 │ kl=0.665 │ β=1.00 │ lr=2.5e-04
+Epoch 0110 │ loss=1.8175 │ recon=1.256 │ kl=0.687 │ β=1.00 │ lr=1.3e-04
+Epoch 0120 │ loss=1.8004 │ recon=1.127 │ kl=0.661 │ β=1.00 │ lr=1.3e-04
+Epoch 0130 │ loss=1.8229 │ recon=0.969 │ kl=0.684 │ β=1.00 │ lr=1.3e-04
+Epoch 0140 │ loss=1.7801 │ recon=1.131 │ kl=0.688 │ β=1.00 │ lr=1.3e-04
+Epoch 0150 │ loss=1.7781 │ recon=0.667 │ kl=0.672 │ β=1.00 │ lr=1.3e-04
+Epoch 0160 │ loss=1.7933 │ recon=0.837 │ kl=0.668 │ β=1.00 │ lr=6.3e-05
+Epoch 0170 │ loss=1.7809 │ recon=0.923 │ kl=0.667 │ β=1.00 │ lr=6.3e-05
+Epoch 0180 │ loss=1.7751 │ recon=1.015 │ kl=0.681 │ β=1.00 │ lr=6.3e-05
+Epoch 0190 │ loss=1.7607 │ recon=1.229 │ kl=0.666 │ β=1.00 │ lr=6.3e-05
+Epoch 0200 │ loss=1.7805 │ recon=1.078 │ kl=0.686 │ β=1.00 │ lr=6.3e-05
+⏹️  Early stopping at epoch 205 (no improvement for 200 epochs).
+✅  Model saved to ./experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/model.pt
+📈  Loss curve saved to vgae_loss.png
+Novel: 100.00% (Baseline), 100.00% (VGAE)
+Unique: 100.00% (Baseline), 99.00% (VGAE)
+Novel and Unique: 100.00% (Baseline), 99.00% (VGAE)
+Computing node-level statistics...
+Computing node-level statistics...
+Computing node-level statistics...
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 24882948: <graph_generations> in cluster <dcc> Done
+
+Job <graph_generations> was submitted from host <n-62-20-1> by user <s185927> in cluster <dcc> at Sun May  4 09:12:24 2025
+Job was executed on host(s) <8*n-62-11-14>, in queue <gpuv100>, as user <s185927> in cluster <dcc> at Sun May  4 09:12:25 2025
+</zhome/e3/3/139772> was used as the home directory.
+</zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3> was used as the working directory.
+Started at Sun May  4 09:12:25 2025
+Terminated at Sun May  4 09:25:16 2025
+Results reported at Sun May  4 09:25:16 2025
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J graph_generations
+#BSUB -q gpuv100
+#BSUB -n 8
+#BSUB -o logs/%J.out
+#BSUB -e logs/%J.err
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 5:00
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=5GB]"
+# end of BSUB options
+
+module load cuda/11.8
+
+source ~/Desktop/AML/aml_new/bin/activate
+
+python -u src/main.py --mode 'train' --epochs 500 --lr 5e-4 --hidden_dim 64 --latent_dim 32 --num_enc_MP_rounds 3 --decoder gat  --neg_factor 3 --dec_layers 1 --heads 4 
+
+
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   763.30 sec.
+    Max Memory :                                 692 MB
+    Average Memory :                             659.14 MB
+    Total Requested Memory :                     40960.00 MB
+    Delta Memory :                               40268.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                9
+    Run time :                                   801 sec.
+    Turnaround time :                            772 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/24882948.err> for stderr output of this job.
+

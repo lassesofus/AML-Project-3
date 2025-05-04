@@ -1,0 +1,70 @@
+Experiment arguments: {'mode': 'sample', 'epochs': 500, 'lr': 0.0005, 'beta': 5, 'neg_factor': 3.0, 'device': 'cuda', 'hidden_dim': 64, 'latent_dim': 32, 'num_enc_MP_rounds': 3, 'dec_layers': 1, 'heads': 4, 'decoder': 'gat', 'checkpoint': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/model.pt', 'log_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/logs', 'fig_dir': './experiments/gat_hd64_ld32_nr3_ep500_nf3.0_dl1/figures'}
+Loaded 171 training hashes.
+Novel: 100.00% (Baseline), 100.00% (VGAE)
+Unique: 100.00% (Baseline), 99.40% (VGAE)
+Novel and Unique: 100.00% (Baseline), 99.40% (VGAE)
+Computing node-level statistics...
+Computing node-level statistics...
+Computing node-level statistics...
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 24882944: <graph_generations> in cluster <dcc> Done
+
+Job <graph_generations> was submitted from host <n-62-20-1> by user <s185927> in cluster <dcc> at Sun May  4 09:11:04 2025
+Job was executed on host(s) <8*n-62-11-14>, in queue <gpuv100>, as user <s185927> in cluster <dcc> at Sun May  4 09:11:04 2025
+</zhome/e3/3/139772> was used as the home directory.
+</zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3> was used as the working directory.
+Started at Sun May  4 09:11:04 2025
+Terminated at Sun May  4 09:11:43 2025
+Results reported at Sun May  4 09:11:43 2025
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -J graph_generations
+#BSUB -q gpuv100
+#BSUB -n 8
+#BSUB -o logs/%J.out
+#BSUB -e logs/%J.err
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 5:00
+#BSUB -R "span[hosts=1]"
+#BSUB -R "rusage[mem=5GB]"
+# end of BSUB options
+
+module load cuda/11.8
+
+source ~/Desktop/AML/aml_new/bin/activate
+
+python -u src/main.py --mode 'sample' --epochs 500 --lr 5e-4 --hidden_dim 64 --latent_dim 32 --num_enc_MP_rounds 3 --decoder gat  --neg_factor 3 --dec_layers 1 --heads 4 
+
+
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   23.85 sec.
+    Max Memory :                                 385 MB
+    Average Memory :                             385.00 MB
+    Total Requested Memory :                     40960.00 MB
+    Delta Memory :                               40575.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                8
+    Run time :                                   44 sec.
+    Turnaround time :                            39 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file <logs/24882944.err> for stderr output of this job.
+

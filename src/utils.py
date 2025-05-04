@@ -255,7 +255,7 @@ def plot_graphs(graphs, path, title="Graphs"):
     plt.show()
 
 def get_exp_name(args):
-    return f"{args.decoder}_hd{args.hidden_dim}_ld{args.latent_dim}_nr{args.num_rounds}_ep{args.epochs}"
+    return f"{args.decoder}_hd{args.hidden_dim}_ld{args.latent_dim}_nr{args.num_enc_MP_rounds}_ep{args.epochs}_nf{args.neg_factor}_dl{args.dec_layers}"
 
 def prepare_experiment_dirs(args):
     exp_name = get_exp_name(args)

@@ -55,24 +55,29 @@ def main(args):
             node_feature_dim=node_feature_dim,
             hidden_dim=args.hidden_dim, 
             latent_dim=args.latent_dim, 
-            num_rounds=args.num_rounds, 
-            decoder=args.decoder
+            num_rounds=args.num_enc_MP_rounds, 
+            decoder=args.decoder,
+            dec_layers=args.dec_layers,
+            heads=args.heads,
         ).to(device)
-        model, hist = train(VGAE, dataset, beta=args.beta, epochs=args.epochs, checkpoint=args.checkpoint, device=device)
+        print(device)
+        model, hist = train(VGAE, dataset, beta=args.beta, neg_factor=args.neg_factor, epochs=args.epochs, lr=args.lr, checkpoint=args.checkpoint, device=device)
         plot_loss(hist, args.fig_dir)
-        model_loaded = VGAE  # Use the trained model for downstream tasks
+
     else:
-        model_loaded = build_vgae(
-            num_features=node_feature_dim,
+        model = build_vgae(
+            node_feature_dim=node_feature_dim,
             hidden_dim=args.hidden_dim,
             latent_dim=args.latent_dim,
-            num_rounds=args.num_rounds,
-            decoder=args.decoder
+            num_rounds=args.num_enc_MP_rounds,
+            decoder=args.decoder,
+            dec_layers=args.dec_layers,
+            heads=args.heads,
         ).to(device)
-        load_model(model_loaded, args.checkpoint, map_location=device)
+        load_model(model, args.checkpoint, map_location=device)
 
     sizes = empirical_N_sampler(dataset)
-    deep_graphs = sample_graphs(model_loaded, num_graphs=1000, N_sampler=sizes)
+    deep_graphs = sample_graphs(model, num_graphs=1000, N_sampler=sizes, threshold=0.6)
 
     # Plot some of the graphs sampled from the VGAE
     plot_graphs(deep_graphs, args.fig_dir, title='Deep Graphs')
@@ -103,13 +108,16 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, choices=['train', 'sample'], default='train',
                     help="Set to 'train' to train a new model, 'sample' to load and sample from an existing model.")
     parser.add_argument('--epochs', type=int, default=500)
+    parser.add_argument('--lr', type=float, default=5e-4)
     parser.add_argument('--beta', type=float, default=5)
     parser.add_argument('--neg_factor', type=float, default=5)
-    parser.add_argument('--device', type=str, default=None, help="Device to use: 'cuda' or 'cpu'")    
+    parser.add_argument('--device', type=str, default='cuda', help="Device to use: 'cuda' or 'cpu'")    
     parser.add_argument('--hidden_dim', type=int, default=64)
     parser.add_argument('--latent_dim', type=int, default=32)
-    parser.add_argument('--num_rounds', type=int, default=5)
-    parser.add_argument('--decoder', type=str, default='gnn', choices=['dot', 'mlp', 'gnn'])
+    parser.add_argument('--num_enc_MP_rounds', type=int, default=5)
+    parser.add_argument('--dec_layers', type=int, default=1)
+    parser.add_argument('--heads', type=int, default=4)
+    parser.add_argument('--decoder', type=str, default='gnn', choices=['dot', 'mlp', 'gnn', 'gat'])
     args = parser.parse_args()
     main(args)
 
