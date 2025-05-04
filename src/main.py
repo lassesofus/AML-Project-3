@@ -63,7 +63,7 @@ def main():
         'distribution_weight': 200.0,
         'valency_weight': 50.0,
         'sparsity_weight': 100.0,
-        'connectivity_weight': 100.0,
+        'connectivity_weight': 0.0,
         
         # Structure constraints
         'max_degree': 3,

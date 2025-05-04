@@ -156,13 +156,22 @@ class GraphVAE(nn.Module):
         
         return node_features, adj_logits, z_mean, z_logvar
     
-    def sample(self, num_samples=1, node_counts=None):
+    def sample(self, num_samples=1, node_counts=None, enforce_connectivity=True, 
+               target_degree_matching=True, use_spanning_tree=True):
         """
-        Sample new graphs from the prior with enforced connectivity and controlled degree distribution
+        Sample new graphs from the prior with optional post-processing steps
+        
+        Post-processing methods:
+        - enforce_connectivity: Ensures the generated graph is connected
+        - target_degree_matching: Matches nodes to target degree distribution
+        - use_spanning_tree: Creates a spanning tree to ensure connectivity (subset of enforce_connectivity)
         
         Args:
             num_samples: Number of graphs to sample
             node_counts: Optional list of node counts for each graph. If not provided, uses max_nodes.
+            enforce_connectivity: Whether to enforce graph connectivity
+            target_degree_matching: Whether to match target degree distribution
+            use_spanning_tree: Whether to use spanning tree algorithm for connectivity
         
         Returns:
             node_features: Node features for sampled graphs [B, N, F]
@@ -183,7 +192,29 @@ class GraphVAE(nn.Module):
         sampled_adj = torch.zeros_like(adj_probs)
         node_mask = torch.zeros(batch_size, self.max_nodes, dtype=torch.float32, device=device)
         
-        # Process node counts if provided
+        # Process node counts
+        node_counts = self._prepare_node_counts(num_samples, node_counts)
+        
+        # Apply post-processing for each graph in the batch
+        for b in range(batch_size):
+            n_nodes = node_counts[b]
+            node_mask[b, :n_nodes] = 1.0
+            
+            # Generate target degree distribution if needed
+            target_degrees = None
+            if target_degree_matching:
+                target_degrees = self._generate_target_degrees(n_nodes)
+                
+            # Sample adjacency matrix with optional post-processing
+            sampled_adj[b] = self._sample_adjacency(
+                adj_probs[b], n_nodes, target_degrees,
+                enforce_connectivity, use_spanning_tree
+            )
+        
+        return node_features, sampled_adj, node_mask
+    
+    def _prepare_node_counts(self, num_samples, node_counts=None):
+        """Prepare the node counts for each graph in the batch"""
         if node_counts is None:
             # If not provided, use max nodes for all graphs
             node_counts = [self.max_nodes] * num_samples
@@ -195,116 +226,167 @@ class GraphVAE(nn.Module):
             if len(node_counts) < num_samples:
                 node_counts.extend([self.max_nodes] * (num_samples - len(node_counts)))
         
+        return node_counts
+    
+    def _generate_target_degrees(self, n_nodes):
+        """Generate target degrees for a graph with n_nodes"""
         # Ideal degree distribution (from MUTAG dataset)
         # We want about 20% degree 1, 40% degree 2, 40% degree 3
         target_degree_percentages = [0.0, 0.20, 0.40, 0.40, 0.0, 0.0, 0.0]  # [deg 0, 1, 2, 3, 4, 5, 6+]
         
-        for b in range(batch_size):
-            # Use provided node count for this graph
-            n_nodes = node_counts[b]
+        # Create target degree distribution for this graph
+        target_degrees = []
+        for degree, percentage in enumerate(target_degree_percentages):
+            if degree > 0:  # Skip degree 0
+                num_nodes_with_degree = int(n_nodes * percentage)
+                target_degrees.extend([degree] * num_nodes_with_degree)
+        
+        # If we don't have enough degrees due to rounding, add more deg 2-3 nodes
+        while len(target_degrees) < n_nodes:
+            target_degrees.append(random.choice([2, 3]))
             
-            # Update mask to indicate valid nodes
-            node_mask[b, :n_nodes] = 1.0
+        # Shuffle target degrees
+        random.shuffle(target_degrees)
+        
+        return torch.tensor(target_degrees, device=device)
+    
+    def _sample_adjacency(self, adj_probs, n_nodes, target_degrees=None, 
+                          enforce_connectivity=True, use_spanning_tree=True):
+        """
+        Sample adjacency matrix with optional post-processing steps
+        
+        Args:
+            adj_probs: Edge probabilities [N, N]
+            n_nodes: Number of nodes in the graph
+            target_degrees: Target degree for each node, or None if not using target degree matching
+            enforce_connectivity: Whether to enforce graph connectivity
+            use_spanning_tree: Whether to use spanning tree algorithm for connectivity
+        
+        Returns:
+            sampled_adj: Sampled adjacency matrix [N, N]
+        """
+        # Initialize adjacency matrix
+        sampled_adj = torch.zeros_like(adj_probs)
+        
+        # Create a list of potential edges sorted by probability (only for valid nodes)
+        edge_list = []
+        for i in range(n_nodes):
+            for j in range(i+1, n_nodes):  # Upper triangle only
+                edge_list.append((i, j, adj_probs[i, j].item()))
+        
+        # Sort by probability (highest first)
+        edge_list.sort(key=lambda x: x[2], reverse=True)
+        
+        # Track current node degrees
+        degrees = torch.zeros(n_nodes, device=device)
+        
+        # If we're enforcing connectivity, we need to keep track of connected components
+        if enforce_connectivity:
+            if use_spanning_tree:
+                sampled_adj = self._apply_spanning_tree(sampled_adj, edge_list, n_nodes, degrees, target_degrees)
             
-            # Create target degree distribution for this graph
-            target_degrees = []
-            for degree, percentage in enumerate(target_degree_percentages):
-                if degree > 0:  # Skip degree 0
-                    num_nodes_with_degree = int(n_nodes * percentage)
-                    target_degrees.extend([degree] * num_nodes_with_degree)
+            # Ensure the graph is fully connected
+            sampled_adj = self._ensure_connectivity(sampled_adj, n_nodes, degrees, target_degrees)
+        
+        # Add additional edges to match target degrees if specified
+        if target_degrees is not None:
+            sampled_adj = self._match_target_degrees(sampled_adj, n_nodes, degrees, target_degrees, adj_probs)
+        # If no post-processing, just sample based on probabilities
+        elif not enforce_connectivity:
+            sampled_adj = self._simple_probability_sampling(adj_probs, n_nodes)
             
-            # If we don't have enough degrees due to rounding, add more deg 2-3 nodes
-            while len(target_degrees) < n_nodes:
-                target_degrees.append(random.choice([2, 3]))
+        return sampled_adj
+    
+    def _apply_spanning_tree(self, sampled_adj, edge_list, n_nodes, degrees, target_degrees=None):
+        """Create a spanning tree to ensure connectivity"""
+        # Use Union-Find data structure
+        parents = list(range(n_nodes))
+        
+        def find(x):
+            if parents[x] != x:
+                parents[x] = find(parents[x])
+            return parents[x]
+        
+        def union(x, y):
+            parents[find(x)] = find(y)
+        
+        # Initialize with one edge to start the spanning tree
+        for i, j, prob in edge_list:
+            # Check if we can add this edge based on target degrees (if any)
+            if target_degrees is None or (degrees[i] < target_degrees[i] and degrees[j] < target_degrees[j]):
+                sampled_adj[i, j] = 1.0
+                sampled_adj[j, i] = 1.0
+                degrees[i] += 1
+                degrees[j] += 1
+                union(i, j)
+                break
+        
+        # Continue building spanning tree (connect all components)
+        edges_needed = n_nodes - 1  # Spanning tree needs n-1 edges
+        edges_added = 1
+        
+        for i, j, prob in edge_list:
+            # Skip if already added
+            if sampled_adj[i, j] > 0:
+                continue
                 
-            # Shuffle target degrees
-            random.shuffle(target_degrees)
-            
-            # Create a list of potential edges sorted by probability (only for valid nodes)
-            edge_list = []
-            for i in range(n_nodes):
-                for j in range(i+1, n_nodes):  # Upper triangle only
-                    edge_list.append((i, j, adj_probs[b, i, j].item()))
-            
-            # Sort by probability (highest first)
-            edge_list.sort(key=lambda x: x[2], reverse=True)
-            
-            # Track current node degrees
-            degrees = torch.zeros(n_nodes, device=device)
-            
-            # First create a spanning tree to ensure connectivity
-            # Use Union-Find data structure
-            parents = list(range(n_nodes))
-            
-            def find(x):
-                if parents[x] != x:
-                    parents[x] = find(parents[x])
-                return parents[x]
-            
-            def union(x, y):
-                parents[find(x)] = find(y)
-            
-            # Initialize with one edge to start the spanning tree
-            for i, j, prob in edge_list:
+            # Only add edge if it connects two separate components
+            if find(i) != find(j):
                 # Check if we can add this edge based on target degrees
-                if degrees[i] < target_degrees[i] and degrees[j] < target_degrees[j]:
-                    sampled_adj[b, i, j] = 1.0
-                    sampled_adj[b, j, i] = 1.0
+                if target_degrees is None or (degrees[i] < target_degrees[i] and degrees[j] < target_degrees[j]):
+                    sampled_adj[i, j] = 1.0
+                    sampled_adj[j, i] = 1.0
                     degrees[i] += 1
                     degrees[j] += 1
                     union(i, j)
-                    break
-            
-            # Continue building spanning tree (connect all components)
-            edges_needed = n_nodes - 1  # Spanning tree needs n-1 edges
-            edges_added = 1
-            
-            # Track components
-            components = {}
-            for e_idx, (i, j, prob) in enumerate(edge_list):
-                # Skip if already added
-                if sampled_adj[b, i, j] > 0:
-                    continue
-                    
-                # Only add edge if it connects two separate components
-                if find(i) != find(j):
-                    # Check if we can add this edge based on target degrees
-                    if degrees[i] < target_degrees[i] and degrees[j] < target_degrees[j]:
-                        sampled_adj[b, i, j] = 1.0
-                        sampled_adj[b, j, i] = 1.0
-                        degrees[i] += 1
-                        degrees[j] += 1
-                        union(i, j)
-                        edges_added += 1
-                    
-                # Ensure we have enough edges for a spanning tree
-                if edges_added >= edges_needed:
-                    # Check if graph is fully connected
-                    root_id = find(0)
-                    all_connected = all(find(node) == root_id for node in range(n_nodes))
-                    if all_connected:
-                        break
-            
-            # Count components to check connectivity
-            unique_components = set()
-            for node in range(n_nodes):
-                unique_components.add(find(node))
-            
-            # If still multiple components, force connectivity while respecting degree constraints
-            if len(unique_components) > 1:
-                # Identify components
-                component_to_nodes = {}
-                for node in range(n_nodes):
-                    comp = find(node)
-                    if comp not in component_to_nodes:
-                        component_to_nodes[comp] = []
-                    component_to_nodes[comp].append(node)
+                    edges_added += 1
                 
-                # Connect components
-                components_list = list(component_to_nodes.keys())
-                for i in range(1, len(components_list)):
-                    # Try to find nodes that can be connected
-                    found_connection = False
+            # Ensure we have enough edges for a spanning tree
+            if edges_added >= edges_needed:
+                # Check if graph is fully connected
+                root_id = find(0)
+                all_connected = all(find(node) == root_id for node in range(n_nodes))
+                if all_connected:
+                    break
+                    
+        return sampled_adj
+    
+    def _ensure_connectivity(self, sampled_adj, n_nodes, degrees, target_degrees=None):
+        """Force graph connectivity, potentially overriding degree constraints"""
+        # Use Union-Find data structure
+        parents = list(range(n_nodes))
+        
+        def find(x):
+            if parents[x] != x:
+                parents[x] = find(parents[x])
+            return parents[x]
+        
+        def union(x, y):
+            parents[find(x)] = find(y)
+        
+        # Initialize parents based on existing edges
+        for i in range(n_nodes):
+            for j in range(i+1, n_nodes):
+                if sampled_adj[i, j] > 0:
+                    union(i, j)
+        
+        # Identify components
+        component_to_nodes = {}
+        for node in range(n_nodes):
+            comp = find(node)
+            if comp not in component_to_nodes:
+                component_to_nodes[comp] = []
+            component_to_nodes[comp].append(node)
+        
+        # If multiple components, connect them
+        if len(component_to_nodes) > 1:
+            components_list = list(component_to_nodes.keys())
+            for i in range(1, len(components_list)):
+                # Try to find nodes that can be connected
+                found_connection = False
+                
+                # Try to respect degree constraints if provided
+                if target_degrees is not None:
                     for node1 in component_to_nodes[components_list[0]]:
                         if degrees[node1] >= target_degrees[node1]:
                             continue
@@ -313,8 +395,8 @@ class GraphVAE(nn.Module):
                                 continue
                                 
                             # Connect these components
-                            sampled_adj[b, node1, node2] = 1.0
-                            sampled_adj[b, node2, node1] = 1.0
+                            sampled_adj[node1, node2] = 1.0
+                            sampled_adj[node2, node1] = 1.0
                             degrees[node1] += 1
                             degrees[node2] += 1
                             union(node1, node2)
@@ -322,47 +404,67 @@ class GraphVAE(nn.Module):
                             break
                         if found_connection:
                             break
-                    
-                    # If no connection possible with degree constraints, relax constraint for one node
-                    if not found_connection:
-                        node1 = component_to_nodes[components_list[0]][0]
-                        node2 = component_to_nodes[components_list[i]][0]
-                        sampled_adj[b, node1, node2] = 1.0
-                        sampled_adj[b, node2, node1] = 1.0
-                        degrees[node1] += 1
-                        degrees[node2] += 1
-                        union(node1, node2)
-            
-            # Add additional edges to match target degrees, but respect target constraints
-            for i in range(n_nodes):
-                # Skip if already at or above target degree
-                if degrees[i] >= target_degrees[i]:
-                    continue
                 
-                # Find potential neighbors for this node
-                potential_neighbors = []
-                for j in range(n_nodes):
-                    if i != j and sampled_adj[b, i, j] == 0 and degrees[j] < target_degrees[j]:
-                        potential_neighbors.append((j, adj_probs[b, i, j].item()))
-                
-                # Sort by probability
-                potential_neighbors.sort(key=lambda x: x[1], reverse=True)
-                
-                # Add edges until reaching target degree
-                for j, prob in potential_neighbors:
-                    if degrees[i] >= target_degrees[i] or degrees[j] >= target_degrees[j]:
-                        continue
-                        
-                    # Add edge
-                    sampled_adj[b, i, j] = 1.0
-                    sampled_adj[b, j, i] = 1.0
-                    degrees[i] += 1
-                    degrees[j] += 1
-                    
-                    if degrees[i] >= target_degrees[i]:
-                        break
+                # If no connection possible with degree constraints, relax constraints
+                if not found_connection:
+                    node1 = component_to_nodes[components_list[0]][0]
+                    node2 = component_to_nodes[components_list[i]][0]
+                    sampled_adj[node1, node2] = 1.0
+                    sampled_adj[node2, node1] = 1.0
+                    degrees[node1] += 1
+                    degrees[node2] += 1
+                    union(node1, node2)
         
-        return node_features, sampled_adj, node_mask
+        return sampled_adj
+    
+    def _match_target_degrees(self, sampled_adj, n_nodes, degrees, target_degrees, adj_probs):
+        """Add edges to match target degrees while respecting constraints"""
+        for i in range(n_nodes):
+            # Skip if already at or above target degree
+            if degrees[i] >= target_degrees[i]:
+                continue
+            
+            # Find potential neighbors for this node
+            potential_neighbors = []
+            for j in range(n_nodes):
+                if i != j and sampled_adj[i, j] == 0 and degrees[j] < target_degrees[j]:
+                    potential_neighbors.append((j, adj_probs[i, j].item()))
+            
+            # Sort by probability
+            potential_neighbors.sort(key=lambda x: x[1], reverse=True)
+            
+            # Add edges until reaching target degree
+            for j, prob in potential_neighbors:
+                if degrees[i] >= target_degrees[i] or degrees[j] >= target_degrees[j]:
+                    continue
+                    
+                # Add edge
+                sampled_adj[i, j] = 1.0
+                sampled_adj[j, i] = 1.0
+                degrees[i] += 1
+                degrees[j] += 1
+                
+                if degrees[i] >= target_degrees[i]:
+                    break
+                    
+        return sampled_adj
+    
+    def _simple_probability_sampling(self, adj_probs, n_nodes):
+        """Sample edges based purely on probabilities"""
+        # Make a copy to avoid modifying the original
+        sampled_adj = torch.zeros_like(adj_probs)
+        
+        # Simple threshold sampling for valid nodes
+        threshold = 0.5  # Can be adjusted
+        sampled_adj[:n_nodes, :n_nodes] = (adj_probs[:n_nodes, :n_nodes] > threshold).float()
+        
+        # Make adjacency matrix symmetric (undirected graph)
+        sampled_adj = torch.triu(sampled_adj, diagonal=1) + torch.triu(sampled_adj, diagonal=1).transpose(0, 1)
+        
+        # No self-loops
+        sampled_adj.fill_diagonal_(0)
+        
+        return sampled_adj
 
     def interpolate(self, x1, edge_index1, batch1, x2, edge_index2, batch2, steps=5):
         """Interpolate between two graphs in latent space"""

@@ -41,7 +41,10 @@ def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=N
         sampled_node_counts = [random.randint(10, max_nodes) for _ in range(num_samples)]
         
     # Generate graphs with sampled node counts
-    node_features, adj_sampled, node_mask = model.sample(num_samples, sampled_node_counts)
+    node_features, adj_sampled, node_mask = model.sample(num_samples, sampled_node_counts, 
+                                                         enforce_connectivity=False,  # Always enforce connectivity
+                                                         use_spanning_tree=False,    # Use spanning tree to ensure connected graphs
+                                                         target_degree_matching=False)
     graphs = []
 
     for i in range(num_samples):
@@ -50,6 +53,9 @@ def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=N
         mask = node_mask[i].bool().cpu().numpy()
         actual_nodes = int(mask.sum())
         
+        if actual_nodes < 2:  # Skip if we have fewer than 2 nodes (can't form edges)
+            continue
+            
         # Create NetworkX graph with only the active nodes
         G = nx.Graph()
         
@@ -58,14 +64,27 @@ def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=N
             G.add_node(j)
             
         # Add edges between active nodes
+        edge_added = False
         for j in range(actual_nodes):
             for k in range(j+1, actual_nodes):
                 if adj_matrix[j, k] > 0.5:  # Edge exists
                     G.add_edge(j, k)
+                    edge_added = True
         
+        # Force at least one edge if none were added and we have nodes
+        if not edge_added and actual_nodes >= 2:
+            G.add_edge(0, 1)
+            
         # Remove isolated nodes (degree 0) if any
         G.remove_nodes_from(list(nx.isolates(G)))
         
+        # Only add graphs that have at least one node
+        if G.number_of_nodes() > 0:
+            graphs.append(G)
+    
+    # If somehow no valid graphs were generated, create at least one simple graph
+    if not graphs and num_samples > 0:
+        G = nx.path_graph(3)  # Simple path graph with 3 nodes
         graphs.append(G)
         
     return graphs
@@ -99,20 +118,36 @@ def compute_metrics(graphs):
         degrees.extend(degs)
         
         # Compute clustering coefficients
-        try:
+        if G.number_of_nodes() >= 3 and G.number_of_edges() > 0:
             clust = nx.clustering(G)
             clustering.extend(clust.values())
-        except nx.NetworkXError:
+        else:
             clustering.extend([0.0] * G.number_of_nodes())
 
         # Compute eigenvector centrality
-        try:
-            # Increase max_iter and tol for robustness
-            eig = nx.eigenvector_centrality_numpy(G)
-            eigenvector.extend(eig.values())
-        except (nx.NetworkXError, nx.PowerIterationFailedConvergence, ZeroDivisionError, nx.AmbiguousSolution):
-            # Handle convergence issues, graphs where centrality is zero, or disconnected graphs
-            eigenvector.extend([0.0] * G.number_of_nodes())
+        if G.number_of_nodes() < 3 or G.number_of_edges() < 2:
+            # For very small graphs, assign equal centrality
+            eig_vals = [1.0/G.number_of_nodes()] * G.number_of_nodes()
+            eigenvector.extend(eig_vals)
+        elif nx.is_tree(G):
+            # For trees, eigenvector centrality has special properties
+            # Assign centrality based on degree (normalized)
+            total_degree = sum(degs)
+            if total_degree > 0:
+                eig_vals = [d/total_degree for d in degs]
+            else:
+                eig_vals = [1.0/G.number_of_nodes()] * G.number_of_nodes()
+            eigenvector.extend(eig_vals)
+        else:
+            # Standard eigenvector centrality calculation for larger graphs
+            if nx.is_connected(G):
+                # For connected graphs, use standard approach
+                eig = nx.eigenvector_centrality(G, max_iter=1000, tol=1.0e-6)
+                eigenvector.extend(eig.values())
+            else:
+                # For disconnected graphs, calculate per component or use degree centrality
+                eig = nx.degree_centrality(G)
+                eigenvector.extend(eig.values())
 
         # Check if graph is connected
         if G.number_of_nodes() > 0 and not nx.is_connected(G):

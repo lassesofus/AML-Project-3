@@ -3,3 +3,4 @@ actvenv.sh
 .aml
 .venv
 uv.lock
+*.pt

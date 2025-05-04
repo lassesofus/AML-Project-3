@@ -1,6 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from src.utils.data import prepare_batch_targets
 from src.utils.plot import plot_curves
 from src.training.loss import calculate_vae_loss, kl_annealing_factor
@@ -8,6 +9,50 @@ from src.utils.graph_utils import count_connected_components
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+def save_loss_plot(train_history, val_history, epoch, save_dir='figures'):
+    """
+    Save a plot of the training and validation loss, overwriting previous plot
+    
+    Args:
+        train_history: Dictionary of training metrics
+        val_history: Dictionary of validation metrics
+        epoch: Current epoch number
+        save_dir: Directory to save plot images
+    """
+    # Create save directory if it doesn't exist
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Create figure for loss curves
+    plt.figure(figsize=(12, 6))
+    
+    # Plot total loss
+    plt.subplot(1, 2, 1)
+    plt.plot(train_history['total'], label='Train Total Loss')
+    plt.plot(val_history['total'], label='Val Total Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.yscale('log')
+    plt.title(f'Total Loss (Epoch {epoch})')
+    
+    # Plot loss components
+    plt.subplot(1, 2, 2)
+    plt.plot(train_history['reconstruction'], label='Reconstruction')
+    plt.plot(train_history['kl'], label='KL Divergence')
+    plt.plot(train_history['structure_penalty'], label='Structure Penalty')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss Component')
+    plt.legend()
+    plt.yscale('log')
+    plt.title('Loss Components')
+    
+    # Save the figure with a fixed filename
+    plt.tight_layout()
+    filename = f'{save_dir}/loss_plot.png'
+    plt.savefig(filename, dpi=300)
+    plt.close()
+    print(f"Updated loss plot at {filename} (Epoch {epoch})")
 
 def evaluate_model(model, loader, max_nodes, node_feature_dim, beta, target_degree_dist, config, device):
     """
@@ -222,6 +267,10 @@ def train_graph_vae(model, train_loader, validation_loader, config):
             
             # Update plots
             plot_curves(train_history, val_history, epoch)
+        
+        # Save loss plots every 30 epochs
+        if (epoch + 1) % 30 == 0:
+            save_loss_plot(train_history, val_history, epoch + 1)
     
     # Save Model
     print(f"Training finished. Saving model to {model_save_path}")
