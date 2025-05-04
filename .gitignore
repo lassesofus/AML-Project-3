@@ -2,3 +2,4 @@ __pycache__
 actvenv.sh
 .aml
 .venv
+uv.lock
