@@ -154,16 +154,6 @@ def plot_curves(train_history, val_history, epoch, save_dir='figures'):
     plt.tight_layout()
     drawnow()
     
-    # Save the figures periodically
-    if epoch % 50 == 0 or epoch == 0:
-        plt.figure('Loss')
-        plt.savefig(f'{save_dir}/vgae_loss_{epoch}.png')
-        plt.figure('Penalties')
-        plt.savefig(f'{save_dir}/vgae_penalties_{epoch}.png')
-        plt.figure('Stats')
-        plt.savefig(f'{save_dir}/vgae_stats_{epoch}.png')
-        plt.figure('Train vs Val Losses')
-        plt.savefig(f'{save_dir}/vgae_detailed_losses_{epoch}.png')
 
 def plot_histograms(original_metrics, vae_metrics, filename='method_comparison.png'):
     """
@@ -206,7 +196,8 @@ def plot_histograms(original_metrics, vae_metrics, filename='method_comparison.p
 
 def plot_sample_graphs(original_graphs, vae_graphs, filename='sample_graphs_comparison.png'):
     """
-    Plot sample graphs from original dataset and VAE-generated graphs
+    Plot sample graphs from original dataset and VAE-generated graphs.
+    Shows the full graphs without filtering, including isolated nodes.
     
     Args:
         original_graphs: List of original NetworkX graphs
@@ -216,27 +207,86 @@ def plot_sample_graphs(original_graphs, vae_graphs, filename='sample_graphs_comp
     import networkx as nx
     import random
     
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    # Increase number of samples to show more variety
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+    plt.subplots_adjust(hspace=0.5)  # Add more space between rows
+    
+    # Select one graph with multiple components if available (for VAE)
+    multi_component_graphs = [g for g in vae_graphs if nx.number_connected_components(g) > 1]
+    
     for i, graphs in enumerate([original_graphs, vae_graphs]):
-        num_to_sample = min(3, len(graphs))
-        if num_to_sample == 0:
-            for j in range(3):
-                ax = axes[i, j]
-                ax.text(0.5, 0.5, 'No Graphs', ha='center', va='center', transform=ax.transAxes)
-                ax.set_title(f"{'Original' if i == 0 else 'VAE'} Sample {j+1}")
-            continue
-
-        samples = random.sample(graphs, num_to_sample)
-        for j in range(3):
+        title_prefix = 'Original' if i == 0 else 'VAE'
+        
+        # For VAE row, try to choose diverse samples
+        if i == 1 and multi_component_graphs:
+            # Select one multi-component graph if available, and random others
+            samples = [multi_component_graphs[0]] if multi_component_graphs else []
+            remaining = [g for g in vae_graphs if g not in samples]
+            num_random = min(3, len(remaining))
+            if num_random > 0:
+                samples.extend(random.sample(remaining, num_random))
+        else:
+            # For original graphs or if no multi-component, just random sample
+            num_to_sample = min(4, len(graphs))
+            if num_to_sample == 0:
+                samples = []
+            else:
+                samples = random.sample(graphs, num_to_sample)
+        
+        # Draw each selected graph
+        for j in range(4):
             ax = axes[i, j]
             if j < len(samples):
                 G = samples[j]
-                pos = nx.spring_layout(G, seed=42) if G.number_of_nodes() > 0 else {}
-                nx.draw(G, pos, node_size=50, ax=ax, width=0.5)
-                title = 'Original' if i == 0 else 'VAE'
-                ax.set_title(f"{title} Sample {j+1} (N={G.number_of_nodes()})")
+                
+                # Get stats for the title
+                n_nodes = G.number_of_nodes()
+                n_edges = G.number_of_edges()
+                n_components = nx.number_connected_components(G)
+                n_isolates = len(list(nx.isolates(G)))
+                
+                # Create layout that clearly shows all nodes including isolates
+                if n_nodes > 0:
+                    if n_isolates > 0:
+                        # Special layout to better visualize isolated nodes
+                        pos = nx.spring_layout(G, seed=42+j)
+                        # Adjust isolated nodes to be more visible
+                        isolates = list(nx.isolates(G))
+                        for idx, node in enumerate(isolates):
+                            angle = 2 * np.pi * idx / len(isolates)
+                            pos[node] = np.array([1.5 * np.cos(angle), 1.5 * np.sin(angle)])
+                    else:
+                        pos = nx.spring_layout(G, seed=42+j)
+                else:
+                    pos = {}
+                
+                # Draw the graph with node colors indicating connected components
+                components = list(nx.connected_components(G))
+                colors = plt.cm.tab10(np.linspace(0, 1, max(10, len(components))))
+                
+                # Assign colors to nodes based on their component
+                node_colors = []
+                for node in G.nodes():
+                    # Find which component this node belongs to
+                    for idx, component in enumerate(components):
+                        if node in component:
+                            node_colors.append(colors[idx % len(colors)])
+                            break
+                    else:
+                        # This should not happen, but just in case
+                        node_colors.append('lightgray')
+                
+                # Draw graph with additional details
+                nx.draw(G, pos, node_size=80, ax=ax, width=0.8, 
+                        node_color=node_colors, 
+                        with_labels=n_nodes < 20)  # Only show labels for small graphs
+                
+                # Detailed title with graph statistics
+                ax.set_title(f"{title_prefix} #{j+1}: {n_nodes} nodes, {n_edges} edges\n"
+                             f"{n_components} comp{'s' if n_components != 1 else ''}, "
+                             f"{n_isolates} isolated")
             else:
-                ax.set_title(f"{'Original' if i == 0 else 'VAE'} Sample {j+1}")
+                ax.set_title(f"{title_prefix} Sample {j+1}")
                 ax.axis('off')
 
     plt.tight_layout()

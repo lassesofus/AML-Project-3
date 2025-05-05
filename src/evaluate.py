@@ -21,7 +21,7 @@ torch.manual_seed(42)
 
 def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=None):
     """
-    Sample graphs from the VAE using our custom degree-constrained sampling method.
+    Sample graphs from the VAE without any post-processing to see the raw model output.
     
     Args:
         model: The trained GraphVAE model
@@ -40,22 +40,33 @@ def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=N
         # Fallback to random counts if not provided
         sampled_node_counts = [random.randint(10, max_nodes) for _ in range(num_samples)]
         
-    # Generate graphs with sampled node counts
-    node_features, adj_sampled, node_mask = model.sample(num_samples, sampled_node_counts, 
-                                                         enforce_connectivity=False,  # Always enforce connectivity
-                                                         use_spanning_tree=False,    # Use spanning tree to ensure connected graphs
-                                                         target_degree_matching=False)
+    # Generate graphs with sampled node counts - disable all post-processing
+    node_features, adj_sampled, node_mask = model.sample(num_samples, sampled_node_counts)
     graphs = []
+    total_edges = 0
+    total_nodes = 0
+    all_probs = []  # Store all edge probabilities for analysis
+
+    print("\nDebug - Raw Graph Generation Statistics:")
+    print(f"Sampled {num_samples} graphs with these properties:")
+    
+    # Set a lower threshold for edge creation to see if we get any edges
+    edge_threshold = 0.1  # Try a much lower threshold than 0.5
+    print(f"Using edge probability threshold: {edge_threshold}")
 
     for i in range(num_samples):
         # Extract sampled adjacency matrix and apply node mask
         adj_matrix = adj_sampled[i].cpu().numpy()
         mask = node_mask[i].bool().cpu().numpy()
         actual_nodes = int(mask.sum())
+        total_nodes += actual_nodes
         
-        if actual_nodes < 2:  # Skip if we have fewer than 2 nodes (can't form edges)
-            continue
-            
+        # Store edge probabilities for the first few graphs to analyze the distribution
+        if i < 5:
+            for j in range(actual_nodes):
+                for k in range(j+1, actual_nodes):
+                    all_probs.append(adj_matrix[j, k])
+        
         # Create NetworkX graph with only the active nodes
         G = nx.Graph()
         
@@ -63,95 +74,147 @@ def sample_graphs_from_vae(model, num_samples, max_nodes, original_node_counts=N
         for j in range(actual_nodes):
             G.add_node(j)
             
-        # Add edges between active nodes
-        edge_added = False
+        # Add edges between active nodes - using lower threshold
+        edge_count = 0
+        max_prob = 0
         for j in range(actual_nodes):
             for k in range(j+1, actual_nodes):
-                if adj_matrix[j, k] > 0.5:  # Edge exists
+                prob = adj_matrix[j, k]
+                max_prob = max(max_prob, prob)
+                if prob > edge_threshold:  # Edge exists with lower threshold
                     G.add_edge(j, k)
-                    edge_added = True
+                    edge_count += 1
         
-        # Force at least one edge if none were added and we have nodes
-        if not edge_added and actual_nodes >= 2:
-            G.add_edge(0, 1)
-            
-        # Remove isolated nodes (degree 0) if any
-        G.remove_nodes_from(list(nx.isolates(G)))
+        total_edges += edge_count
         
-        # Only add graphs that have at least one node
-        if G.number_of_nodes() > 0:
-            graphs.append(G)
-    
-    # If somehow no valid graphs were generated, create at least one simple graph
-    if not graphs and num_samples > 0:
-        G = nx.path_graph(3)  # Simple path graph with 3 nodes
+        # No post-processing - add the graph even if it has no edges or isolated nodes
         graphs.append(G)
+        
+        # Debug every 20th graph or if it has unusual properties
+        if i % 20 == 0 or edge_count == 0 or actual_nodes < 3:
+            print(f"  Graph {i}: Nodes={actual_nodes}, Edges={edge_count}, " 
+                  f"Max Prob={max_prob:.4f}, Connected={nx.is_connected(G) if actual_nodes > 0 else 'N/A'}, "
+                  f"Components={nx.number_connected_components(G) if actual_nodes > 0 else 0}")
+    
+    if graphs:
+        avg_nodes = total_nodes / len(graphs)
+        avg_edges = total_edges / len(graphs)
+        print(f"\nSummary: Average nodes per graph: {avg_nodes:.2f}, Average edges per graph: {avg_edges:.2f}")
+        
+    # Analyze edge probability distribution
+    if all_probs:
+        all_probs = np.array(all_probs)
+        print(f"\nEdge probability statistics (from first 5 graphs):")
+        print(f"  Min: {all_probs.min():.6f}, Max: {all_probs.max():.6f}")
+        print(f"  Mean: {all_probs.mean():.6f}, Median: {np.median(all_probs):.6f}")
+        print(f"  5th percentile: {np.percentile(all_probs, 5):.6f}")
+        print(f"  95th percentile: {np.percentile(all_probs, 95):.6f}")
+        
+        # Count probabilities in ranges
+        ranges = [(0, 0.01), (0.01, 0.05), (0.05, 0.1), (0.1, 0.2), (0.2, 0.3), (0.3, 0.4), (0.4, 0.5), (0.5, 1.0)]
+        for low, high in ranges:
+            count = ((all_probs >= low) & (all_probs < high)).sum()
+            percent = count / len(all_probs) * 100
+            print(f"  Probability [{low:.2f}-{high:.2f}): {count} values ({percent:.1f}%)")
         
     return graphs
 
 def compute_metrics(graphs):
     """
     Compute degree, clustering, and eigenvector centrality for a list of graphs.
+    For each graph, metrics are calculated on the largest connected component
+    while overall statistics track the full graphs.
     
     Args:
         graphs: List of NetworkX graphs
         
     Returns:
-        degrees: List of node degrees
-        clustering: List of clustering coefficients
-        eigenvector: List of eigenvector centrality values
-        num_nodes_list: List of node counts per graph
+        degrees: List of node degrees from largest connected components
+        clustering: List of clustering coefficients from largest connected components
+        eigenvector: List of eigenvector centrality values from largest connected components
+        num_nodes_list: List of node counts per graph (full graphs)
         disconnected_count: Number of disconnected graphs
     """
     degrees, clustering, eigenvector = [], [], []
     num_nodes_list = []
     disconnected_count = 0
     
-    for G in graphs:
+    print("\nDebug - Metrics Calculation:")
+    print("Using largest connected component of each graph for metrics")
+    total_components = 0
+    total_isolated = 0
+    
+    for i, G in enumerate(graphs):
         if G.number_of_nodes() == 0:
             continue
             
+        # Track full graph statistics
         num_nodes_list.append(G.number_of_nodes())
+        n_components = nx.number_connected_components(G)
+        total_components += n_components
+        isolated_nodes = list(nx.isolates(G))
+        total_isolated += len(isolated_nodes)
         
-        # Compute degrees
-        degs = [d for _, d in G.degree()]
+        # Find largest connected component for metrics
+        if not nx.is_connected(G):
+            disconnected_count += 1
+            components = list(nx.connected_components(G))
+            largest_cc = max(components, key=len)
+            # Get subgraph of largest component
+            G_lcc = G.subgraph(largest_cc).copy()
+            
+            # Debug output for some graphs
+            if i % 50 == 0 or G.number_of_nodes() < 3:
+                print(f"  Graph {i}: Full size={G.number_of_nodes()}, Components={n_components}, " 
+                      f"LCC size={G_lcc.number_of_nodes()}, Isolated nodes={len(isolated_nodes)}")
+        else:
+            G_lcc = G
+            
+        # Only compute metrics if LCC has nodes
+        if G_lcc.number_of_nodes() == 0:
+            continue
+            
+        # Compute degrees on LCC
+        degs = [d for _, d in G_lcc.degree()]
         degrees.extend(degs)
         
-        # Compute clustering coefficients
-        if G.number_of_nodes() >= 3 and G.number_of_edges() > 0:
-            clust = nx.clustering(G)
+        # Compute clustering coefficients on LCC
+        if G_lcc.number_of_nodes() >= 3 and G_lcc.number_of_edges() > 0:
+            clust = nx.clustering(G_lcc)
             clustering.extend(clust.values())
         else:
-            clustering.extend([0.0] * G.number_of_nodes())
+            clustering.extend([0.0] * G_lcc.number_of_nodes())
 
-        # Compute eigenvector centrality
-        if G.number_of_nodes() < 3 or G.number_of_edges() < 2:
+        # Compute eigenvector centrality on LCC
+        if G_lcc.number_of_nodes() < 3 or G_lcc.number_of_edges() < 2:
             # For very small graphs, assign equal centrality
-            eig_vals = [1.0/G.number_of_nodes()] * G.number_of_nodes()
+            eig_vals = [1.0/G_lcc.number_of_nodes()] * G_lcc.number_of_nodes()
             eigenvector.extend(eig_vals)
-        elif nx.is_tree(G):
-            # For trees, eigenvector centrality has special properties
-            # Assign centrality based on degree (normalized)
+        elif nx.is_tree(G_lcc):
+            # For trees, use degree centrality (normalized)
             total_degree = sum(degs)
             if total_degree > 0:
                 eig_vals = [d/total_degree for d in degs]
             else:
-                eig_vals = [1.0/G.number_of_nodes()] * G.number_of_nodes()
+                eig_vals = [1.0/G_lcc.number_of_nodes()] * G_lcc.number_of_nodes()
             eigenvector.extend(eig_vals)
         else:
-            # Standard eigenvector centrality calculation for larger graphs
-            if nx.is_connected(G):
-                # For connected graphs, use standard approach
-                eig = nx.eigenvector_centrality(G, max_iter=1000, tol=1.0e-6)
+            # Standard eigenvector centrality calculation
+            try:
+                eig = nx.eigenvector_centrality(G_lcc, max_iter=1000, tol=1.0e-6)
                 eigenvector.extend(eig.values())
-            else:
-                # For disconnected graphs, calculate per component or use degree centrality
-                eig = nx.degree_centrality(G)
+            except:
+                # Fallback to degree centrality if eigenvector computation fails
+                eig = nx.degree_centrality(G_lcc)
                 eigenvector.extend(eig.values())
 
-        # Check if graph is connected
-        if G.number_of_nodes() > 0 and not nx.is_connected(G):
-            disconnected_count += 1
+    # Print summary statistics
+    if graphs:
+        print(f"\nMetrics Summary:")
+        print(f"  Total graphs: {len(graphs)}")
+        print(f"  Disconnected graphs: {disconnected_count} ({disconnected_count/len(graphs)*100:.1f}%)")
+        print(f"  Average components per graph: {total_components/len(graphs):.2f}")
+        print(f"  Total isolated nodes: {total_isolated}")
 
     return degrees, clustering, eigenvector, num_nodes_list, disconnected_count
 
@@ -167,7 +230,7 @@ def print_statistics(original_graphs, vae_graphs, original_metrics, vae_metrics)
     """
     print("\nSummary Statistics:")
     metrics_list = [original_metrics, vae_metrics]
-    names = ['Original', 'Graph VAE']
+    names = ['Target (Original)', 'Graph VAE']
 
     for i, (name, metrics) in enumerate(zip(names, metrics_list)):
         degs, clustering, eigen, num_nodes_list, disconnected_count = metrics

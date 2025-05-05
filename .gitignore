@@ -4,3 +4,4 @@ actvenv.sh
 .venv
 uv.lock
 *.pt
+.png
