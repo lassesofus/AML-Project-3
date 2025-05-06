@@ -9,13 +9,14 @@ import networkx as nx
 import pdb
 import numpy as np
 
-def calculate_degree_penalty(adj_matrices, num_nodes_per_graph=None, max_degree=3):
+def calculate_degree_penalty(adj_matrices, num_nodes_per_graph=None, max_degree=3, progressive=True):
     """
     Computes a penalty based on how many nodes have degree > max_degree
     Args:
         adj_matrices: Batch of adjacency matrices [batch_size, num_nodes, num_nodes]
         num_nodes_per_graph: Optional tensor with number of nodes per graph in batch
         max_degree: Maximum allowed degree before penalty is applied
+        progressive: If True, apply progressively higher penalties for higher degrees
     Returns:
         Penalty term to add to loss
     """
@@ -31,8 +32,17 @@ def calculate_degree_penalty(adj_matrices, num_nodes_per_graph=None, max_degree=
     # Build mask to ignore padded nodes
     idx = torch.arange(N, device=adj_matrices.device).unsqueeze(0)  # [1, N]
     mask = (idx < num_nodes_per_graph.unsqueeze(1)).float()        # [B, N]
+    
     # Compute excess degree over max_degree, only for real nodes
-    excess = torch.clamp(deg - max_degree, min=0) * mask           # [B, N]
+    if progressive:
+        # Apply progressively higher penalties for higher degrees
+        # Square the excess to make higher degrees contribute quadratically more
+        raw_excess = torch.clamp(deg - max_degree, min=0)
+        excess = torch.pow(raw_excess, 2) * mask
+    else:
+        # Original linear penalty
+        excess = torch.clamp(deg - max_degree, min=0) * mask
+        
     # Normalize per graph by its real node count
     per_graph = excess.sum(dim=1) / mask.sum(dim=1).clamp(min=1)    # [B]
     # Return mean penalty over batch
@@ -396,11 +406,11 @@ def train_vae(model: VAE, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.p
             )
 
             # Sample and visualize graphs at regular intervals or at the end
-            if debug_mode and (epoch % 10 == 0 or epoch == epochs):
+            if  (epoch % 20 == 0 or epoch == epochs):
                 model.eval()
                 with torch.no_grad():
                     # Sample graphs using the same method as in model.sample
-                    n_samples = 3
+                    n_samples = 6
                     train_samples = []
                     raw_samples = []
                     
@@ -450,7 +460,9 @@ def train_vae(model: VAE, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.p
                     analyze_and_compare_graphs(raw_samples, train_samples, epoch, calculate_degree_penalty, debug_mode)
                 
                 # Visualize the latent space
-                visualize_latent_space(model, dataloader, epoch, device)
+                if debug_mode:
+                    print(f"\n--- Epoch {epoch} Latent Space Visualization ---")
+                    visualize_latent_space(model, dataloader, epoch, device)
                 
                 # Calculate active units
                 active_units, variances = calculate_active_units(model, dataloader, device)
@@ -462,17 +474,17 @@ def train_vae(model: VAE, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.p
                 print(f"KL Divergence: {avg_kl_loss:.4f} (weight={kl_weight:.2f})")
                 print(f"Active dimensions: {active_units}/{latent_dim} ({active_percent:.1f}%)")
                 
-                # Show variance distribution
-                plt.figure(figsize=(10, 5))
-                plt.bar(range(len(variances)), sorted(variances, reverse=True))
-                plt.axhline(y=0.01, color='r', linestyle='--', label='Threshold')
-                plt.title(f'Latent Dimension Variances (Epoch {epoch})')
-                plt.xlabel('Latent Dimension (sorted)')
-                plt.ylabel('Variance')
-                plt.legend()
-                plt.tight_layout()
-                plt.savefig(f'epochs/latent_variances_epoch_{epoch}.png')
-                plt.close()
+                # # Show variance distribution
+                # plt.figure(figsize=(10, 5))
+                # plt.bar(range(len(variances)), sorted(variances, reverse=True))
+                # plt.axhline(y=0.01, color='r', linestyle='--', label='Threshold')
+                # plt.title(f'Latent Dimension Variances (Epoch {epoch})')
+                # plt.xlabel('Latent Dimension (sorted)')
+                # plt.ylabel('Variance')
+                # plt.legend()
+                # plt.tight_layout()
+                # plt.savefig(f'epochs/latent_variances_epoch_{epoch}.png')
+                # plt.close()
                 
     # Plot extended loss curve with KL and degree penalty
     plt.figure(figsize=(12, 8))

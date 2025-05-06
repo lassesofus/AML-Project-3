@@ -14,6 +14,8 @@ class SimpleMLPDecoderNet(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(latent_dim, hidden_dim),
             nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),  # Extra layer
+            nn.ReLU(),
             nn.Linear(hidden_dim, max_nodes * (max_nodes-1) // 2),
         )
 
@@ -228,8 +230,8 @@ class GCNEncoderNetwork(nn.Module):
 def get_vae(num_nodes_list,device='cpu'):
 
 
-    latent_dim = 4
-    hidden_dim = 16
+    latent_dim = 32
+    hidden_dim = 128
     node_feature_dim = 7
 
     node_dist: NodeDist = NodeDist(num_nodes_list)

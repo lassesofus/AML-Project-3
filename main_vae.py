@@ -25,7 +25,6 @@ vae = get_vae(num_nodes_list)
 
 # Train with anti-collapse measures
 train_vae(vae, dataloader, lr=5e-4, epochs=400, save_path=save_path, 
-          degree_penalty_weight=5, debug_mode=debug_mode,  # Reduced penalty weight
+          degree_penalty_weight=10, debug_mode=debug_mode,  # Reduced penalty weight
           patience=100, min_delta=0.0001,
-          kl_annealing=True, min_kl_weight=0.0, max_kl_weight=1.0,
-          free_bits=0.01, beta_vae=0.2)  # Added free bits and beta-VAE
+          kl_annealing=True, min_kl_weight=0.2, max_kl_weight=1.0)  # Added free bits and beta-VAE
