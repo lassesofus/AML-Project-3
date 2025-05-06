@@ -1,18 +1,0 @@
-Loaded module: cuda/11.8
-/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
-  backends.update(_get_backends("networkx.backends"))
-  0%|          | 0/1000 [00:00<?, ?it/s] 72%|███████▏  | 722/1000 [00:00<00:00, 7210.17it/s]100%|██████████| 1000/1000 [00:00<00:00, 7180.93it/s]
-Traceback (most recent call last):
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/main.py", line 117, in <module>
-    args = parser.parse_args()
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/main.py", line 62, in main
-    model, hist = train(VGAE, dataset, beta=args.beta, neg_factor=args.neg_factor, epochs=args.epochs, lr=args.lr, checkpoint=args.checkpoint, device=device)
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/VAE.py", line 214, in train
-    loss.backward()
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/_tensor.py", line 581, in backward
-    torch.autograd.backward(
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/autograd/__init__.py", line 347, in backward
-    _engine_run_backward(
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/autograd/graph.py", line 825, in _engine_run_backward
-    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-KeyboardInterrupt

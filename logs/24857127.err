@@ -1,32 +1,0 @@
-Loaded module: cuda/11.8
-/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
-  backends.update(_get_backends("networkx.backends"))
-  0%|          | 0/1000 [00:00<?, ?it/s] 69%|██████▉   | 694/1000 [00:00<00:00, 6934.93it/s]100%|██████████| 1000/1000 [00:00<00:00, 6923.18it/s]
-Traceback (most recent call last):
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/main.py", line 117, in <module>
-    main(args)
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/main.py", line 62, in main
-    model, hist = train(VGAE, dataset, beta=args.beta, neg_factor=args.neg_factor, epochs=args.epochs, checkpoint=args.checkpoint, device=device)
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/VAE.py", line 206, in train
-    z = model.encode(data.x, data.edge_index)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch_geometric/nn/models/autoencoder.py", line 169, in encode
-    self.__mu__, self.__logstd__ = self.encoder(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/AML/Module_3/AML-Project-3/src/VAE.py", line 66, in forward
-    msg = self.message_net[r](state)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/container.py", line 250, in forward
-    input = module(input)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/zhome/e3/3/139772/Desktop/AML/aml_new/lib64/python3.9/site-packages/torch/nn/modules/linear.py", line 125, in forward
-    return F.linear(input, self.weight, self.bias)
-KeyboardInterrupt
