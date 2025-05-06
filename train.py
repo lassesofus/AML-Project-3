@@ -6,14 +6,20 @@ from torch_geometric.utils import to_dense_adj
 import networkx as nx
 from utils_viz import analyze_and_compare_graphs, plot_training_loss
 from utils_stats import calculate_degree_penalty, compute_graph_statistics, calculate_active_units
+from utils_stats import calculate_isolated_nodes_penalty, calculate_triangle_penalty
 
 def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt', 
               loss_plot_path='loss_curve.png', device='cpu', degree_penalty_weight=0.5, 
               debug_mode=False, patience=20, min_delta=0.0001,
               kl_annealing=True, min_kl_weight=0.0, max_kl_weight=1.0,
-              free_bits=0.01, beta_vae=0.2):
+              free_bits=0.01, beta_vae=0.2,
+              isolated_nodes_penalty_weight=0.0, triangle_penalty_weight=0.0):
     """
     Train a VAE model on graph data with various regularization techniques.
+    
+    Additional Parameters:
+        isolated_nodes_penalty_weight: Weight for penalizing isolated nodes (0.0 = off)
+        triangle_penalty_weight: Weight for penalizing triangles (0.0 = off)
     """
     model.to(device)
     
@@ -30,6 +36,8 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
     kl_values = []
     avg_kl_per_epoch = []
     active_units_per_epoch = []
+    isolated_node_penalties = []
+    triangle_penalties = []
     no_improvement_count = 0
     
     latent_dim = model.prior().base_dist.loc.shape[0]
@@ -42,6 +50,8 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
             epoch_deg_penalty = 0
             epoch_recon_loss = 0
             epoch_kl_loss = 0
+            epoch_isolated_penalty = 0
+            epoch_triangle_penalty = 0
             
             # KL annealing schedule
             if kl_annealing:
@@ -68,7 +78,7 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
                 epoch_recon_loss += recon_loss.item()
                 epoch_kl_loss += kl.item()
                 
-                # Get decoded adjacency for degree penalty
+                # Get decoded adjacency for penalties
                 q = model.encoder(batch.x, batch.edge_index, batch.batch)
                 z = q.rsample()
                 adj_pred_dist = model.decoder(z).base_dist
@@ -87,9 +97,29 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
                 soft_samples = torch.sigmoid((torch.log(adj_probs + 1e-10) - torch.log(1 - adj_probs + 1e-10) + gumbel_noise) / temp)
                 deg_penalty_diff = calculate_degree_penalty(soft_samples, num_nodes_per_graph=num_nodes_per_graph)
                 
-                # Final loss with penalty
+                # Calculate isolated nodes penalty if enabled
+                isolated_nodes_penalty = 0.0
+                if isolated_nodes_penalty_weight > 0:
+                    isolated_nodes_penalty = calculate_isolated_nodes_penalty(soft_samples, num_nodes_per_graph)
+                    epoch_isolated_penalty += isolated_nodes_penalty.item()
+                
+                # Calculate triangle penalty if enabled
+                triangle_penalty = 0.0
+                if triangle_penalty_weight > 0:
+                    triangle_penalty = calculate_triangle_penalty(soft_samples, num_nodes_per_graph)
+                    epoch_triangle_penalty += triangle_penalty.item()
+                
+                # Adaptive penalty weights
                 adaptive_penalty_weight = degree_penalty_weight * min(2.0, (1 + 0.2 * epoch / epochs))
+                
+                # Final loss with all penalties
                 loss_with_penalty = loss + adaptive_penalty_weight * deg_penalty_diff
+                
+                if isolated_nodes_penalty_weight > 0:
+                    loss_with_penalty = loss_with_penalty + isolated_nodes_penalty_weight * isolated_nodes_penalty
+                
+                if triangle_penalty_weight > 0:
+                    loss_with_penalty = loss_with_penalty + triangle_penalty_weight * triangle_penalty
                 
                 # Add L2 regularization
                 decoder_params = list(model.decoder.decoder_net.parameters())
@@ -107,10 +137,16 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
             avg_deg_penalty = epoch_deg_penalty / len(dataloader)
             avg_recon_loss = epoch_recon_loss / len(dataloader)
             avg_kl_loss = epoch_kl_loss / len(dataloader)
+            avg_isolated_penalty = epoch_isolated_penalty / len(dataloader) if isolated_nodes_penalty_weight > 0 else 0
+            avg_triangle_penalty = epoch_triangle_penalty / len(dataloader) if triangle_penalty_weight > 0 else 0
             
             loss_history.append(avg_loss)
             degree_penalties.append(avg_deg_penalty)
             kl_values.append(avg_kl_loss)
+            if isolated_nodes_penalty_weight > 0:
+                isolated_node_penalties.append(avg_isolated_penalty)
+            if triangle_penalty_weight > 0:
+                triangle_penalties.append(avg_triangle_penalty)
             avg_kl_per_epoch.append((avg_kl_loss, kl_weight))
             
             scheduler.step(avg_loss)
@@ -134,18 +170,25 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
             # Update progress bar
             pbar.set_postfix({'Epoch': epoch, 'Loss': f'{avg_loss:.4f}'})
             
-            # Print training stats
-            tqdm.write(
+            # Print training stats with additional penalty information
+            stats_str = (
                 f"Epoch {epoch:3d} | "
                 f"Loss: {avg_loss:.4f} | "
                 f"Best: {best_loss:.4f} | "
                 f"Recon: {avg_recon_loss:.4f} | "
                 f"KL: {avg_kl_loss:.4f} (w={kl_weight:.2f}) | "
-                f"Deg: {avg_deg_penalty:.4f} | "
-                f"Pat: {no_improvement_count}/{patience} | "
-                f"LR: {optimizer.param_groups[0]['lr']:.1e} | "
-                f"FB: {free_bits:.4f}"
+                f"Deg: {avg_deg_penalty:.4f}"
             )
+            
+            if isolated_nodes_penalty_weight > 0:
+                stats_str += f" | Isol: {avg_isolated_penalty:.4f}"
+            
+            if triangle_penalty_weight > 0:
+                stats_str += f" | Tri: {avg_triangle_penalty:.4f}"
+                
+            stats_str += f" | Pat: {no_improvement_count}/{patience} | LR: {optimizer.param_groups[0]['lr']:.1e}"
+            
+            tqdm.write(stats_str)
 
             # Sample and visualize graphs at regular intervals
             if epoch % 20 == 0 or epoch == epochs:
@@ -233,4 +276,4 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
     print(f"Training graphs: mean={train_degree_mean:.4f}, std={train_degree_std:.4f}")
     print(f"Generated graphs: mean={gen_degree_mean:.4f}, std={gen_degree_std:.4f}")
     print(f"Difference in means: {abs(train_degree_mean - gen_degree_mean):.4f}")
-        
+

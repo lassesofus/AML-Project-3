@@ -23,8 +23,20 @@ num_nodes_list = [data.num_nodes for data in dataset]
 
 vae = get_vae(num_nodes_list)
 
-# Train with anti-collapse measures
-train_vae(vae, dataloader, lr=5e-4, epochs=400, save_path=save_path, 
-          degree_penalty_weight=10, debug_mode=debug_mode,  # Reduced penalty weight
-          patience=100, min_delta=0.0001,
-          kl_annealing=True, min_kl_weight=0.2, max_kl_weight=1.0)  # Added free bits and beta-VAE
+# Train with much stronger triangle penalty
+train_vae(
+    vae, 
+    dataloader, 
+    lr=5e-3, 
+    epochs=1000, 
+    save_path=save_path, 
+    degree_penalty_weight=0.11,  
+    isolated_nodes_penalty_weight=0,  
+    triangle_penalty_weight=0.005,  # Significantly increase triangle penalty
+    debug_mode=True,  # Enable debugging to monitor triangle formation
+    patience=100, 
+    min_delta=0.0001,
+    kl_annealing=True, 
+    min_kl_weight=0.2, 
+    max_kl_weight=1.0
+)

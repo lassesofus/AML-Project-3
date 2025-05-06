@@ -1,4 +1,3 @@
-
 # %% 
 import pdb
 import torch
@@ -117,12 +116,29 @@ def compute_graph_statistics(graphs):
         clustering = list(nx.clustering(graph_nx).values())
         clustering_list.extend(clustering)
 
-        # Compute eigenvector centrality
-        try:
-            eigenvector_centrality = list(nx.eigenvector_centrality_numpy(graph_nx).values())
-        except nx.NetworkXError:
-            eigenvector_centrality = [0] * graph_nx.number_of_nodes()  # Handle disconnected graphs
-        eigenvector_centrality_list.extend(eigenvector_centrality)
+        # Compute eigenvector centrality with better error handling
+        if graph_nx.number_of_nodes() > 0 and graph_nx.number_of_edges() > 0:
+            # First try the default method
+            ec_values = [0] * graph_nx.number_of_nodes()  # Default zeros
+            
+            # Method 1: Standard eigenvector centrality
+            if nx.is_connected(graph_nx):
+                # Only try eigenvector centrality if connected
+                # Use power iteration method which is more robust
+                try:
+                    ec = nx.eigenvector_centrality_numpy(graph_nx, max_iter=1000)
+                    ec_values = list(ec.values())
+                except:
+                    # Fall back to power iteration if numpy method fails
+                    try:
+                        ec = nx.eigenvector_centrality(graph_nx, max_iter=1000, tol=1e-3)
+                        ec_values = list(ec.values())
+                    except:
+                        pass  # Keep zeros if both methods fail
+            
+            eigenvector_centrality_list.extend(ec_values)
+        else:
+            eigenvector_centrality_list.extend([0] * graph_nx.number_of_nodes())  # Handle empty graphs
 
     return degree_list, clustering_list, eigenvector_centrality_list
 

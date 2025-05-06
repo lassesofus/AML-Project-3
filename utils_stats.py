@@ -13,11 +13,9 @@ def calculate_degree_penalty(adj_matrices, num_nodes_per_graph=None, max_degree=
     if num_nodes_per_graph is None:
         num_nodes_per_graph = torch.full((B,), N, dtype=torch.long, device=adj_matrices.device)
 
-    # Binarize adjacency for integer edge counts
     bin_adj = (adj_matrices > 0.5).float()
-    # Compute degree per node
     deg = bin_adj.sum(dim=2)
-    # Build mask to ignore padded nodes
+
     idx = torch.arange(N, device=adj_matrices.device).unsqueeze(0)
     mask = (idx < num_nodes_per_graph.unsqueeze(1)).float()
     
@@ -28,9 +26,99 @@ def calculate_degree_penalty(adj_matrices, num_nodes_per_graph=None, max_degree=
     else:
         excess = torch.clamp(deg - max_degree, min=0) * mask
         
-    # Normalize per graph by its real node count
     per_graph = excess.sum(dim=1) / mask.sum(dim=1).clamp(min=1)
     return per_graph.mean()
+
+def calculate_isolated_nodes_penalty(adj_matrices, num_nodes_per_graph=None):
+    """
+    Penalize isolated nodes (nodes with degree 0).
+    
+    Args:
+        adj_matrices: Batch of adjacency matrices [batch_size, num_nodes, num_nodes]
+        num_nodes_per_graph: Optional tensor with number of nodes per graph in batch
+        
+    Returns:
+        Penalty term to add to loss
+    """
+    # Infer per-graph node counts if not provided
+    B, N, _ = adj_matrices.shape
+    if num_nodes_per_graph is None:
+        num_nodes_per_graph = torch.full((B,), N, dtype=torch.long, device=adj_matrices.device)
+
+    # Binarize adjacency for integer edge counts
+    bin_adj = (adj_matrices > 0.5).float()
+    
+    # Compute degree per node
+    deg = bin_adj.sum(dim=2)  # [B, N]
+    
+    # Build mask to ignore padded nodes
+    idx = torch.arange(N, device=adj_matrices.device).unsqueeze(0)  # [1, N]
+    mask = (idx < num_nodes_per_graph.unsqueeze(1)).float()  # [B, N]
+    
+    # Count nodes with degree 0 (isolated nodes)
+    isolated_nodes = (deg == 0).float() * mask
+    
+    # Normalize per graph by its real node count
+    per_graph = isolated_nodes.sum(dim=1) / mask.sum(dim=1).clamp(min=1)  # [B]
+    
+    # Return mean penalty over batch
+    return per_graph.mean()
+
+def calculate_triangle_penalty(adj_matrices, num_nodes_per_graph=None, target_coef=0.0):
+    """
+    Penalize triangles (3-cycles) in the graph with a more effective implementation.
+    
+    Args:
+        adj_matrices: Batch of adjacency matrices [batch_size, num_nodes, num_nodes]
+        num_nodes_per_graph: Optional tensor with number of nodes per graph in batch
+        target_coef: Target clustering coefficient (default 0.0 for no triangles)
+        
+    Returns:
+        Penalty term to add to loss
+    """
+    # Infer per-graph node counts if not provided
+    B, N, _ = adj_matrices.shape
+    if num_nodes_per_graph is None:
+        num_nodes_per_graph = torch.full((B,), N, dtype=torch.long, device=adj_matrices.device)
+
+    # Initialize penalty
+    penalty = torch.zeros(B, device=adj_matrices.device)
+    
+    for i in range(B):
+        # Get effective adjacency matrix for real nodes
+        n = num_nodes_per_graph[i].item()
+        if n > 2:  # Need at least 3 nodes for triangles
+            A = adj_matrices[i, :n, :n]
+            
+            # Calculate A² for path counts
+            A_squared = torch.matmul(A, A)
+            
+            # Element-wise multiplication with A gives triangles
+            # This counts closed paths of length 3 starting from each node
+            triangle_tensor = A * A_squared
+            
+            # Sum and normalize properly (each triangle is counted 3 times)
+            triangle_count = torch.sum(triangle_tensor) / 6.0
+            
+            # Only penalize if we have triangles (target is 0)
+            if target_coef == 0.0:
+                penalty[i] = triangle_count
+            else:
+                # Get actual clustering coefficient
+                triangle_possible = 0
+                degrees = torch.sum(A, dim=1)
+                for d in degrees:
+                    # Possible triangles = d choose 2
+                    d_int = d.item()
+                    if d_int >= 2:
+                        triangle_possible += (d_int * (d_int - 1)) / 2
+                
+                if triangle_possible > 0:
+                    actual_coef = triangle_count / triangle_possible
+                    # Penalize deviation from target
+                    penalty[i] = (actual_coef - target_coef)**2
+    
+    return penalty.mean()
 
 def compute_graph_statistics(graphs):
     """
