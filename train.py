@@ -12,7 +12,7 @@ from torch_geometric.utils import to_dense_adj
 import networkx as nx
 import pdb
 
-def train_vae(model: VAE, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt', loss_plot_path='loss_curve.png',device='cuda'):
+def train_vae(model: VAE, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt', loss_plot_path='loss_curve.png',device='cpu'):
     model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 

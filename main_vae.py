@@ -6,7 +6,7 @@ from train import train_vae
 
 
 # Configs
-device = 'cuda'
+device = 'cpu'
 dataset = TUDataset(root='./data/', name='MUTAG').to(device)
 batch_size = 32
 save_path = './models/graph_vae.pt'

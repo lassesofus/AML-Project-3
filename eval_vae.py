@@ -11,10 +11,10 @@ from torch_geometric.utils import degree
 from erdos_renyi import ErdosRenyiSampler
 from architecture import get_vae
 from utils import load_model_checkpoint
-device = 'cuda'
+
 
 # Configs
-device = 'cuda'
+device = 'cpu'
 dataset = TUDataset(root='./data/', name='MUTAG').to(device)
 node_feature_dim = dataset.num_node_features  # should be 7
 latent_dim = 16
