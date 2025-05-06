@@ -263,7 +263,7 @@ def train(model: VGAE,
 
             recon = model.recon_loss(z, pos_edge_index, neg_edge_index)
             kl = model.kl_loss() / data.num_nodes
-            loss = recon + beta * kl
+            loss = recon + kl
             loss.backward()
             opt.step()
             #pdb.set_trace()

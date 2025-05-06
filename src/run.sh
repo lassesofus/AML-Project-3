@@ -14,6 +14,6 @@ module load cuda/11.8
 
 source ~/Desktop/AML/aml_new/bin/activate
 
-python -u src/main.py --mode 'sample' --epochs 500 --lr 5e-4 --hidden_dim 64 --latent_dim 32 --num_enc_MP_rounds 3 --decoder gat  --neg_factor 3 --dec_layers 1 --heads 4 
+python -u src/main.py --mode 'train' --epochs 500 --lr 5e-4 --hidden_dim 64 --latent_dim 32 --num_enc_MP_rounds 3 --decoder gat  --neg_factor 3 --dec_layers 1 --heads 4 
 
 
