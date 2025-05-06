@@ -35,7 +35,7 @@ def create_training_config(args=None):
     # Load dataset info
     dataset, node_feature_dim, max_nodes, target_degree_dist, node_counts = load_data()
     
-    # Default configuration - simplified for basic VAE
+    # Default configuration - enhanced for connectivity-focused training
     config = {
         'hidden_dim': 64,      # Consistent with model dimensions
         'latent_dim': 32,      # Consistent with model dimensions
@@ -51,6 +51,11 @@ def create_training_config(args=None):
         'kl_annealing_start': 0,
         'kl_annealing_end': 50, # Shorter annealing period
         'final_beta': 0.1,     # Standard beta value for VAE
+        
+        # Connectivity parameters - using balanced weights
+        'connectivity_weight': 0.5,  # Balanced weight for connectivity loss
+        'degree_weight': 0.6,        # Slightly higher weight for degree distribution
+        'early_stopping_patience': 30, # Patience for early stopping
         
         # Target degree distribution (for reference only)
         'target_degree_dist': target_degree_dist,
@@ -72,7 +77,7 @@ def parse_arguments():
     Returns:
         args: Parsed command line arguments
     """
-    parser = argparse.ArgumentParser(description='Train Graph VAE with basic VAE loss')
+    parser = argparse.ArgumentParser(description='Train Graph VAE with enhanced connectivity focus')
     
     # Model architecture
     parser.add_argument('--hidden_dim', type=int, help='Hidden dimension size')
@@ -88,6 +93,11 @@ def parse_arguments():
     parser.add_argument('--kl_annealing_start', type=int, help='Start epoch for KL annealing')
     parser.add_argument('--kl_annealing_end', type=int, help='End epoch for KL annealing')
     parser.add_argument('--final_beta', type=float, help='Final KL weight after annealing')
+    
+    # Connectivity parameters
+    parser.add_argument('--connectivity_weight', type=float, help='Weight for connectivity loss')
+    parser.add_argument('--degree_weight', type=float, help='Weight for degree distribution loss')
+    parser.add_argument('--early_stopping_patience', type=int, help='Patience for early stopping')
     
     # Output
     parser.add_argument('--model_save_path', type=str, help='Path to save trained model')
@@ -116,6 +126,9 @@ def main():
     print(f"  Number of Epochs: {config['num_epochs']}")
     print(f"  Batch Size: {config['batch_size']}")
     print(f"  KL Annealing: {config['kl_annealing_start']} → {config['kl_annealing_end']} (beta={config['final_beta']})")
+    print(f"  Connectivity Weight: {config['connectivity_weight']}")
+    print(f"  Degree Weight: {config['degree_weight']}")
+    print(f"  Early Stopping Patience: {config['early_stopping_patience']}")
     
     # Create data loaders
     train_loader, validation_loader, test_loader = create_dataloaders(

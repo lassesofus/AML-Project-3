@@ -38,39 +38,6 @@ def find_components(adj_matrix):
     
     return component_labels
 
-def count_connected_components(adj_matrix, node_mask=None):
-    """
-    Count connected components in a graph
-    
-    Args:
-        adj_matrix: Adjacency matrix [N, N]
-        node_mask: Binary mask [N] indicating real nodes
-        
-    Returns:
-        Number of connected components
-    """
-    adj_binary = (adj_matrix > 0.5).float()
-    
-    if node_mask is not None:
-        mask_2d = node_mask.unsqueeze(1) * node_mask.unsqueeze(0)
-        adj_binary = adj_binary * mask_2d
-        
-        # Create a mask for real nodes
-        node_mask_bool = node_mask.bool()
-        n_real_nodes = node_mask_bool.sum().item()
-        if n_real_nodes == 0:
-            return 0
-    else:
-        node_mask_bool = torch.ones(adj_binary.size(0), dtype=torch.bool, device=adj_binary.device)
-    
-    # Get component labels for real nodes
-    component_labels = find_components(adj_binary)
-    
-    # Count unique component ids among real nodes
-    real_component_labels = [component_labels[i] for i in range(len(component_labels)) if node_mask_bool[i]]
-    unique_components = set(real_component_labels)
-    
-    return len(unique_components)
 
 def calculate_degree_metrics(adj_probs, node_mask=None):
     """

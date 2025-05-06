@@ -67,6 +67,52 @@ class GraphConvLayer(nn.Module):
         
         return output
 
+class GraphAttention(nn.Module):
+    """
+    Graph attention layer to help model node dependencies and improve connectivity
+    """
+    def __init__(self, input_dim, output_dim, heads=4, dropout=0.1):
+        super().__init__()
+        self.heads = heads
+        self.head_dim = output_dim // heads
+        assert output_dim % heads == 0, "output_dim must be divisible by heads"
+        
+        # Multi-head attention projections
+        self.query = nn.Linear(input_dim, output_dim)
+        self.key = nn.Linear(input_dim, output_dim)
+        self.value = nn.Linear(input_dim, output_dim)
+        
+        # Output projection
+        self.output_proj = nn.Linear(output_dim, output_dim)
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, x):
+        batch_size, num_nodes, _ = x.size()
+        
+        # Compute Q, K, V projections and reshape to multi-head format
+        q = self.query(x).view(batch_size, num_nodes, self.heads, self.head_dim)
+        k = self.key(x).view(batch_size, num_nodes, self.heads, self.head_dim)
+        v = self.value(x).view(batch_size, num_nodes, self.heads, self.head_dim)
+        
+        # Transpose for attention computation
+        q = q.transpose(1, 2)  # [B, H, N, D]
+        k = k.transpose(1, 2)  # [B, H, N, D]
+        v = v.transpose(1, 2)  # [B, H, N, D]
+        
+        # Compute attention scores
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)  # [B, H, N, N]
+        attn_weights = F.softmax(attn_scores, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+        
+        # Apply attention weights to values
+        out = torch.matmul(attn_weights, v)  # [B, H, N, D]
+        
+        # Reshape back to original format
+        out = out.transpose(1, 2).contiguous().view(batch_size, num_nodes, -1)  # [B, N, H*D]
+        out = self.output_proj(out)
+        
+        return out, attn_weights
+
 class ConnectivityAwareLayer(nn.Module):
     """Layer that helps the model understand graph connectivity patterns"""
     

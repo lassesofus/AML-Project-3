@@ -17,19 +17,27 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Graph VAE training or evaluation")
-    parser.add_argument('mode', choices=['train', 'eval'], 
-                        help='Mode: train (training) or eval (evaluation)')
-    parser.add_argument('--model_path', default='graph_vae_model.pt',
-                        help='Path to model checkpoint file')
-    parser.add_argument('--output_prefix', default='results',
-                        help='Prefix for output files')
+    # Parse the first argument to determine mode
+    if len(sys.argv) < 2 or sys.argv[1] not in ['train', 'eval']:
+        print("Usage: python run.py [train|eval] [options]")
+        sys.exit(1)
     
-    args = parser.parse_args()
+    mode = sys.argv[1]
     
-    if args.mode == 'train':
+    # Remove the first argument (mode) so the subcommand can parse rest of args
+    sys.argv.pop(1)
+    
+    if mode == 'train':
         from src.main import main
         main()
-    elif args.mode == 'eval':
+    elif mode == 'eval':
+        parser = argparse.ArgumentParser(description="Evaluate Graph VAE model")
+        parser.add_argument('--model_path', default='graph_vae_model.pt',
+                            help='Path to model checkpoint file')
+        parser.add_argument('--output_prefix', default='results',
+                            help='Prefix for output files')
+        
+        args = parser.parse_args()
+        
         from src.evaluate import evaluate
         evaluate(model_path=args.model_path, output_prefix=args.output_prefix)
