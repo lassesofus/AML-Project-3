@@ -32,7 +32,7 @@ train_vae(
     save_path=save_path, 
     degree_penalty_weight=0.11,  
     isolated_nodes_penalty_weight=0,  
-    triangle_penalty_weight=0.005,  # Significantly increase triangle penalty
+    triangle_penalty_weight=0.1,  # Significantly increase triangle penalty
     debug_mode=True,  # Enable debugging to monitor triangle formation
     patience=100, 
     min_delta=0.0001,

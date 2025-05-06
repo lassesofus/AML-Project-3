@@ -81,6 +81,9 @@ def calculate_triangle_penalty(adj_matrices, num_nodes_per_graph=None, target_co
     if num_nodes_per_graph is None:
         num_nodes_per_graph = torch.full((B,), N, dtype=torch.long, device=adj_matrices.device)
 
+    # Binarize adjacency for consistent edge counting (ADDED THIS LINE)
+    bin_adj = (adj_matrices > 0.5).float()
+    
     # Initialize penalty
     penalty = torch.zeros(B, device=adj_matrices.device)
     
@@ -88,13 +91,12 @@ def calculate_triangle_penalty(adj_matrices, num_nodes_per_graph=None, target_co
         # Get effective adjacency matrix for real nodes
         n = num_nodes_per_graph[i].item()
         if n > 2:  # Need at least 3 nodes for triangles
-            A = adj_matrices[i, :n, :n]
+            A = bin_adj[i, :n, :n]  # Use binarized adjacency matrix
             
             # Calculate A² for path counts
             A_squared = torch.matmul(A, A)
             
             # Element-wise multiplication with A gives triangles
-            # This counts closed paths of length 3 starting from each node
             triangle_tensor = A * A_squared
             
             # Sum and normalize properly (each triangle is counted 3 times)
@@ -108,14 +110,12 @@ def calculate_triangle_penalty(adj_matrices, num_nodes_per_graph=None, target_co
                 triangle_possible = 0
                 degrees = torch.sum(A, dim=1)
                 for d in degrees:
-                    # Possible triangles = d choose 2
                     d_int = d.item()
                     if d_int >= 2:
                         triangle_possible += (d_int * (d_int - 1)) / 2
                 
                 if triangle_possible > 0:
                     actual_coef = triangle_count / triangle_possible
-                    # Penalize deviation from target
                     penalty[i] = (actual_coef - target_coef)**2
     
     return penalty.mean()

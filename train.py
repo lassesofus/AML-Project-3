@@ -195,7 +195,7 @@ def train_vae(model, dataloader, epochs=50, lr=1e-3, save_path='graph_vae.pt',
                 model.eval()
                 with torch.no_grad():
                     # Sample some graphs to visualize
-                    n_samples = 6
+                    n_samples = 3
                     train_samples = []
                     raw_samples = []
                     
