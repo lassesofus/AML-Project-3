@@ -126,9 +126,14 @@ class VAE(nn.Module):
             indices = scipy.optimize.linear_sum_assignment(cost_matrix.detach().cpu().numpy())
             row_idx, col_idx = indices
             
-            # Permute the predicted matrix
-            adj_pred_permuted = td.Bernoulli(logits=logits[row_idx][:, col_idx])
-            rec_error = self.log_prob(adj_pred_permuted, A_true[i], node_mask[i])
+            # 3) single permutation vector: perm[k] = source node mapped to target k
+            perm = torch.as_tensor(col_idx[np.argsort(row_idx)], device=logits.device)
+
+            # 4) apply same permutation to rows and columns
+            logits_perm = logits[perm][:, perm]
+            adj_pred_perm = td.Bernoulli(logits=logits_perm)
+
+            rec_error = self.log_prob(adj_pred_perm, A_true[i], node_mask[i])
             rec_errors.append(rec_error.mean())
         rec_errors = torch.stack(rec_errors)
            
