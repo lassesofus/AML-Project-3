@@ -225,7 +225,7 @@ class GCNEncoderNetwork(nn.Module):
         return graph_state
 
 
-def get_vae(num_nodes_list,device='cuda'):
+def get_vae(num_nodes_list,device='cpu'):
 
 
     latent_dim = 4

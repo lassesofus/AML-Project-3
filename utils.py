@@ -182,21 +182,21 @@ def plot_histograms(baseline_stats, empirical_stats, deep_stats):
     ax[0, 2].set_title('Centrality Distribution', fontsize=14, fontweight='bold')
     ax[0, 2].set_ylabel('Frequency')
 
-    # Row 1: Baseline distributions (blue)
-    ax[1, 0].hist(baseline_degrees, bins=bins_degrees, alpha=0.5, label='Baseline', color='blue')
+    # Row 1: Deep generative model distributions (orange)
+    ax[1, 0].hist(deep_degrees, bins=bins_degrees, alpha=0.5, label='Deep generative model', color='orange')
     ax[1, 0].set_ylabel('Frequency')
 
-    ax[1, 1].hist(baseline_clustering, bins=bins_clustering, alpha=0.5, label='Baseline', color='blue')
+    ax[1, 1].hist(deep_clustering, bins=bins_clustering, alpha=0.5, label='Deep generative model', color='orange')
     ax[1, 1].set_ylabel('Frequency')
 
-    ax[1, 2].hist(baseline_centrality, bins=bins_centrality, alpha=0.5, label='Baseline', color='blue')
+    ax[1, 2].hist(deep_centrality, bins=bins_centrality, alpha=0.5, label='Deep generative model', color='orange')
     ax[1, 2].set_ylabel('Frequency')
 
-    # Row 2: Deep generative model distributions (orange)
-    ax[2, 0].hist(deep_degrees, bins=bins_degrees, alpha=0.5, label='Deep generative model', color='orange')
+    # Row 2: Baseline distributions (blue)
+    ax[2, 0].hist(baseline_degrees, bins=bins_degrees, alpha=0.5, label='Baseline', color='blue')
     ax[2, 0].set_ylabel('Frequency')
 
-    ax[2, 1].hist(deep_clustering, bins=bins_clustering, alpha=0.5, label='Deep generative model', color='orange')
+    ax[2, 1].hist(baseline_clustering, bins=bins_clustering, alpha=0.5, label='Baseline', color='blue')
     ax[2, 1].set_ylabel('Frequency')
 
     ax[2, 2].hist(deep_centrality, bins=bins_centrality, alpha=0.5, label='Deep generative model', color='orange')
@@ -295,7 +295,7 @@ def load_model_checkpoint(model, checkpoint_path, device='cpu'):
         model (nn.Module): The model instance (must be already created with correct architecture).
         optimizer (torch.optim.Optimizer): The optimizer instance.
         checkpoint_path (str): Path to the .pt or .pth checkpoint file.
-        device (str): 'cpu' or 'cuda' — where to load the model.
+        device (str): 'cpu' or 'cpu' — where to load the model.
 
     Returns:
         model: The model with loaded weights.
