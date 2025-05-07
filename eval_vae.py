@@ -83,13 +83,13 @@ def main():
         generated_degrees, generated_clustering, generated_eigenvector
     )
 
-    # Sample graphs for comparison visualization
-    training_samples = random.sample(training_graphs, 3)
-    erdos_samples = random.sample(erdos_graphs, 3) 
-    vae_samples = random.sample(sampled_graphs, 3)
+    # # Sample graphs for comparison visualization
+    # training_samples = random.sample(training_graphs, 3)
+    # erdos_samples = random.sample(erdos_graphs, 3) 
+    # vae_samples = random.sample(sampled_graphs, 3)
 
     # Plot graph comparison
-    plot_graph_comparison(training_samples, erdos_samples, vae_samples, 'graph_model_comparison.png')
+    # plot_graph_comparison(training_samples, erdos_samples, vae_samples, 'graph_model_comparison.png')
 
 if __name__ == "__main__":
     main()
