@@ -262,9 +262,14 @@ degree_min = int(min(training_degrees + generated_degrees + erdos_renyi_degrees)
 degree_max = 8  # Fixed upper limit for node degree at 8
 degree_bins = list(range(degree_min, degree_max + 1))  # Integer bins from min to max
 
-# For clustering coefficient, use a special binning that emphasizes zero values
-# Create custom bins for clustering coefficient with special handling for zero
-clustering_bins = [0] + list(np.linspace(0.01, max(training_clustering + generated_clustering + erdos_renyi_clustering), num_bins-1))
+# Create custom bins for clustering coefficient with explicit first bin for zero values
+cluster_max = max(training_clustering + generated_clustering + erdos_renyi_clustering)
+# Special bin structure with a narrow bin for zeros then regular bins
+clustering_bins = [0, 0.001] + list(np.linspace(0.001, cluster_max, 7))
+
+# Calculate bin centers for x-ticks - ensure first bin is properly represented
+clustering_ticks = [0] + list(np.linspace(0.1, cluster_max, 6))
+clustering_labels = ['0'] + [f'{x:.2f}' for x in np.linspace(0.1, cluster_max, 6)]
 
 # Create a 3-by-3 grid of subplots with shared y-axis per column
 fig, axes = plt.subplots(3, 3, figsize=(12, 12), sharey='col')
@@ -300,6 +305,9 @@ sns.histplot(training_degrees, color='blue', kde=False, stat="density", bins=deg
 # Special handling for clustering coefficient
 sns.histplot(training_clustering, color='blue', kde=False, stat="density", bins=clustering_bins, ax=axes[0, 1], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
+# Create custom x-ticks that show "0" for the first bin and nice spacing for others
+axes[0, 1].set_xticks(clustering_ticks)
+axes[0, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
 sns.histplot(training_eigenvector, color='blue', kde=False, stat="density", bins=num_bins, ax=axes[0, 2], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
 
@@ -308,6 +316,8 @@ sns.histplot(erdos_renyi_degrees, color='red', kde=False, stat="density", bins=d
              line_kws={"linewidth": 2}, element="bars", alpha=0.7, discrete=True)
 sns.histplot(erdos_renyi_clustering, color='red', kde=False, stat="density", bins=clustering_bins, ax=axes[1, 1], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
+axes[1, 1].set_xticks(clustering_ticks)
+axes[1, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
 sns.histplot(erdos_renyi_eigenvector, color='red', kde=False, stat="density", bins=num_bins, ax=axes[1, 2], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
 
@@ -316,6 +326,8 @@ sns.histplot(generated_degrees, color='green', kde=False, stat="density", bins=d
              line_kws={"linewidth": 2}, element="bars", alpha=0.7, discrete=True)
 sns.histplot(generated_clustering, color='green', kde=False, stat="density", bins=clustering_bins, ax=axes[2, 1], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
+axes[2, 1].set_xticks(clustering_ticks)
+axes[2, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
 sns.histplot(generated_eigenvector, color='green', kde=False, stat="density", bins=num_bins, ax=axes[2, 2], 
              line_kws={"linewidth": 2}, element="bars", alpha=0.7)
 
@@ -327,14 +339,25 @@ for ax in [axes[0, 0], axes[1, 0], axes[2, 0]]:
     ax.set_ylabel('')  # Remove individual y labels
     
 for ax in [axes[0, 1], axes[1, 1], axes[2, 1]]:
-    ax.set_xlim(clustering_min, clustering_max)
+    ax.set_xlim(-0.05, cluster_max + 0.05)  # Extend left boundary to show full first bar
     ax.tick_params(labelsize=12)
     ax.set_ylabel('')  # Remove individual y labels
+    # Fix y-axis to reasonable density values 
+    ax.set_ylim(0, None)  # Let matplotlib determine upper bound based on data
     
 for ax in [axes[0, 2], axes[1, 2], axes[2, 2]]:
     ax.set_xlim(max(0.01, eigenvector_min), eigenvector_max)  # Start from slightly above 0
     ax.tick_params(labelsize=12) 
     ax.set_ylabel('')  # Remove individual y labels
+    # Fix y-axis to reasonable density values
+    ax.set_ylim(0, None)  # Let matplotlib determine upper bound based on data
+
+# Ensure density scaling is correct across all plots
+for row in axes:
+    for ax in row:
+        current_ylim = ax.get_ylim()
+        if current_ylim[1] > 5:  # If scale appears to be percentage rather than density
+            ax.set_ylim(0, min(5, current_ylim[1]/100))  # Cap at 5 for density scale
 
 # Adjust layout and save the figure
 plt.tight_layout(rect=[0.08, 0.04, 1, 0.97])  # Adjust to leave space for labels
