@@ -52,6 +52,19 @@ def plot_degree_distributions(axes, all_degrees, colors, row_labels):
     row_labels : list
         Labels for each graph source
     """
+    # Calculate histograms first to find the maximum y-value
+    max_density = 0
+    histograms = []
+    
+    for degrees in all_degrees:
+        bins = np.arange(0, 11) - 0.5  # Edges at -0.5, 0.5, 1.5, ..., 9.5
+        hist, _ = np.histogram(degrees, bins=bins, density=True)
+        histograms.append(hist)
+        max_density = max(max_density, np.max(hist)) if len(hist) > 0 else max_density
+    
+    # Add a small margin to the maximum density
+    max_density *= 1.1
+    
     for i, degrees in enumerate(all_degrees):
         color = colors[i]
         
@@ -62,13 +75,14 @@ def plot_degree_distributions(axes, all_degrees, colors, row_labels):
         axes[i].hist(degrees, bins=bins, color=color, alpha=0.7, density=True, 
                     rwidth=1.0,  edgecolor='black', linewidth=0.5)  # Added black edges
           # rwidth=1.0 ensures no gaps between bars
-
         
         # Set x-axis limits and ticks consistently for all plots
         axes[i].set_xlim(-0.5, 9.5)
         axes[i].set_xticks(range(0, 10))
-        # Increase font size of x-axis tick labels
         axes[i].tick_params(axis='x', labelsize=14)
+        
+        # Set consistent y-axis limits
+        axes[i].set_ylim(0, max_density)
 
 def plot_clustering_distributions(axes, all_clustering, colors, row_labels):
     """
@@ -85,6 +99,20 @@ def plot_clustering_distributions(axes, all_clustering, colors, row_labels):
     row_labels : list
         Labels for each graph source
     """
+    # Calculate histograms first to find the maximum y-value
+    max_density = 0
+    num_bins = 10
+    bin_edges = np.linspace(0, 1, num_bins + 1)
+    
+    for clustering in all_clustering:
+        total_count = len(clustering)
+        hist, _ = np.histogram(clustering, bins=bin_edges)
+        hist = hist / total_count if total_count > 0 else hist
+        max_density = max(max_density, np.max(hist)) if len(hist) > 0 else max_density
+    
+    # Add a small margin to the maximum density
+    max_density *= 1.1
+    
     for i, clustering in enumerate(all_clustering):
         color = colors[i]
         
@@ -109,9 +137,10 @@ def plot_clustering_distributions(axes, all_clustering, colors, row_labels):
         tick_positions = np.linspace(0, 1, 6)  # 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
         axes[i].set_xticks(tick_positions)
         axes[i].set_xticklabels([f'{x:.1f}' for x in tick_positions])
-        # Increase font size of x-axis tick labels
         axes[i].tick_params(axis='x', labelsize=14)
         
+        # Set consistent y-axis limits
+        axes[i].set_ylim(0, max_density)
 
 def plot_eigenvector_distributions(axes, all_eigenvector, colors, row_labels):
     """
@@ -128,12 +157,23 @@ def plot_eigenvector_distributions(axes, all_eigenvector, colors, row_labels):
     row_labels : list
         Labels for each graph source
     """
+    # Calculate histograms first to find the maximum y-value
+    max_density = 0
+    
+    for eigenvector in all_eigenvector:
+        if eigenvector:
+            hist, _ = np.histogram(eigenvector, bins=20, density=True)
+            max_density = max(max_density, np.max(hist)) if len(hist) > 0 else max_density
+    
+    # Add a small margin to the maximum density
+    max_density *= 1.1
+    
     for i, eigenvector in enumerate(all_eigenvector):
         color = colors[i]
         
         # Plot eigenvector centrality histogram
-        axes[i].hist(eigenvector, bins=20, color=color, alpha=0.7, density=True, edgecolor='black', linewidth=0.5)  # Added black edges
-        
+        axes[i].hist(eigenvector, bins=20, color=color, alpha=0.7, density=True, 
+                    edgecolor='black', linewidth=0.5)  # Added black edges
         
         # Set appropriate ticks for eigenvector centrality histogram
         if eigenvector:
@@ -142,8 +182,10 @@ def plot_eigenvector_distributions(axes, all_eigenvector, colors, row_labels):
             eigen_ticks = np.linspace(min_eigen, max_eigen, 6)
             axes[i].set_xticks(eigen_ticks)
             axes[i].set_xticklabels([f'{x:.2f}' for x in eigen_ticks])
-            # Increase font size of x-axis tick labels
             axes[i].tick_params(axis='x', labelsize=14)
+        
+        # Set consistent y-axis limits
+        axes[i].set_ylim(0, max_density)
 
 def plot_graph_statistics(training_degrees, training_clustering, training_eigenvector,
                           erdos_renyi_degrees, erdos_renyi_clustering, erdos_renyi_eigenvector,
