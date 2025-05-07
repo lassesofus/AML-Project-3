@@ -36,11 +36,14 @@ def compute_graph_metrics(candidate_graphs, reference_graphs):
         else:
             reference_graphs_nx.append(to_networkx(graph, to_undirected=True))
     
-    # Compute novelty for each graph
-    novel_list = [
-        not any(nx.is_isomorphic(g1, g2) for g2 in reference_graphs_nx)
-        for g1 in candidate_graphs_nx
-    ]
+    # Compute WL hashes for reference graphs (structure only)
+    reference_hashes = set(nx.weisfeiler_lehman_graph_hash(g, node_attr=None) for g in reference_graphs_nx)
+
+    # Compute WL hashes for candidate graphs
+    candidate_hashes = [nx.weisfeiler_lehman_graph_hash(g) for g in candidate_graphs_nx]
+
+    # A graph is novel if its hash is not in the reference set
+    novel_list = [h not in reference_hashes for h in candidate_hashes]
     novel_count = sum(novel_list)
     novel_percentage = novel_count / len(candidate_graphs_nx) * 100
 
