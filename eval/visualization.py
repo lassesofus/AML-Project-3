@@ -41,130 +41,68 @@ def plot_graph_statistics(training_degrees, training_clustering, training_eigenv
                           erdos_renyi_degrees, erdos_renyi_clustering, erdos_renyi_eigenvector,
                           generated_degrees, generated_clustering, generated_eigenvector,
                           save_path='graph_statistics_comparison_columns.png'):
-    """
-    Plot histogram comparisons of graph statistics.
+    """Plot histograms of graph statistics for comparison."""
+    fig, axes = plt.subplots(3, 3, figsize=(15, 12))
     
-    Parameters:
-    -----------
-    training_* : list
-        Statistics from training graphs
-    erdos_renyi_* : list
-        Statistics from Erdős-Rényi graphs
-    generated_* : list
-        Statistics from VAE-generated graphs
-    save_path : str
-        Path to save the figure
-    """
-    # Filter eigenvector centrality values to only include those > 0
-    training_eigenvector = [val for val in training_eigenvector if val > 0]
-    erdos_renyi_eigenvector = [val for val in erdos_renyi_eigenvector if val > 0]
-    generated_eigenvector = [val for val in generated_eigenvector if val > 0]
-
-    # Define bins
-    num_bins = 15
-    degree_min = int(min(training_degrees + generated_degrees + erdos_renyi_degrees))
-    degree_max = 8  # Fixed upper limit for node degree at 8
-    degree_bins = list(range(degree_min, degree_max + 1))  # Integer bins from min to max
-
-    # Create custom bins for clustering coefficient with explicit first bin for zero values
-    cluster_max = max(training_clustering + generated_clustering + erdos_renyi_clustering)
-    # Special bin structure with a narrow bin for zeros then regular bins
-    clustering_bins = [0, 0.001] + list(np.linspace(0.001, cluster_max, 7))
-
-    # Calculate bin centers for x-ticks
-    clustering_ticks = [0] + list(np.linspace(0.1, cluster_max, 6))
-    clustering_labels = ['0'] + [f'{x:.2f}' for x in np.linspace(0.1, cluster_max, 6)]
-
-    # Create a 3-by-3 grid of subplots with shared y-axis per column
-    fig, axes = plt.subplots(3, 3, figsize=(12, 12), sharey='col')
-
-    # Compute global axis limits for each statistic
-    clustering_min, clustering_max = min(training_clustering + generated_clustering + erdos_renyi_clustering), max(training_clustering + generated_clustering + erdos_renyi_clustering)
-    eigenvector_min, eigenvector_max = min(training_eigenvector + generated_eigenvector + erdos_renyi_eigenvector), max(training_eigenvector + generated_eigenvector + erdos_renyi_eigenvector)
-
-    # Add column headers
-    axes[0, 0].set_title('Node Degree', fontsize=14, fontweight='bold')
-    axes[0, 1].set_title('Clustering Coefficient', fontsize=14, fontweight='bold')
-    axes[0, 2].set_title('Eigenvector Centrality', fontsize=14, fontweight='bold')
-
-    # Add row labels
-    fig.text(0.01, 0.83, 'Training', fontsize=14, fontweight='bold', rotation=90, va='center')
-    fig.text(0.01, 0.5, 'Erdős-Rényi', fontsize=14, fontweight='bold', rotation=90, va='center')
-    fig.text(0.01, 0.17, 'VAE', fontsize=14, fontweight='bold', rotation=90, va='center')
-
-    # Add individual density labels for each row
-    fig.text(0.06, 0.83, 'Density', fontsize=12, rotation=90, va='center')
-    fig.text(0.06, 0.5, 'Density', fontsize=12, rotation=90, va='center')
-    fig.text(0.06, 0.17, 'Density', fontsize=12, rotation=90, va='center')
-
-    # Add individual value labels for each column
-    fig.text(0.2, 0.02, 'Value', fontsize=12, ha='center')
-    fig.text(0.5, 0.02, 'Value', fontsize=12, ha='center')
-    fig.text(0.8, 0.02, 'Value', fontsize=12, ha='center')
-
-    # Plot all histograms with fewer labels and larger bars
-    # Row 1: Training Graphs
-    sns.histplot(training_degrees, color='blue', kde=False, stat="density", bins=degree_bins, ax=axes[0, 0], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7, discrete=True)
-    sns.histplot(training_clustering, color='blue', kde=False, stat="density", bins=clustering_bins, ax=axes[0, 1], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-    axes[0, 1].set_xticks(clustering_ticks)
-    axes[0, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
-    sns.histplot(training_eigenvector, color='blue', kde=False, stat="density", bins=num_bins, ax=axes[0, 2], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-
-    # Row 2: Erdős-Rényi
-    sns.histplot(erdos_renyi_degrees, color='red', kde=False, stat="density", bins=degree_bins, ax=axes[1, 0], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7, discrete=True)
-    sns.histplot(erdos_renyi_clustering, color='red', kde=False, stat="density", bins=clustering_bins, ax=axes[1, 1], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-    axes[1, 1].set_xticks(clustering_ticks)
-    axes[1, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
-    sns.histplot(erdos_renyi_eigenvector, color='red', kde=False, stat="density", bins=num_bins, ax=axes[1, 2], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-
-    # Row 3: VAE Generated Graphs
-    sns.histplot(generated_degrees, color='green', kde=False, stat="density", bins=degree_bins, ax=axes[2, 0], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7, discrete=True)
-    sns.histplot(generated_clustering, color='green', kde=False, stat="density", bins=clustering_bins, ax=axes[2, 1], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-    axes[2, 1].set_xticks(clustering_ticks)
-    axes[2, 1].set_xticklabels(clustering_labels, rotation=45, ha='center')
-    sns.histplot(generated_eigenvector, color='green', kde=False, stat="density", bins=num_bins, ax=axes[2, 2], 
-                line_kws={"linewidth": 2}, element="bars", alpha=0.7)
-
-    # Set consistent x-axis limits for each column
-    for ax in [axes[0, 0], axes[1, 0], axes[2, 0]]:
-        ax.set_xlim(degree_min - 0.5, degree_max + 0.5)  # Extend slightly beyond the integer values
-        ax.set_xticks(degree_bins)  # Set x-ticks to be exactly the integer bins
-        ax.tick_params(labelsize=12)
-        ax.set_ylabel('')  # Remove individual y labels
+    # Set titles for columns
+    axes[0, 0].set_title('Node Degree')
+    axes[0, 1].set_title('Clustering Coefficient')
+    axes[0, 2].set_title('Eigenvector Centrality')
+    
+    # Row labels
+    row_labels = ['Training', 'Erdős-Rényi', 'VAE']
+    for i, label in enumerate(row_labels):
+        axes[i, 0].set_ylabel(label)
+    
+    # Colors for different data sources
+    colors = ['blue', 'green', 'red']
+    
+    # Group data for iteration
+    all_degrees = [training_degrees, erdos_renyi_degrees, generated_degrees]
+    all_clustering = [training_clustering, erdos_renyi_clustering, generated_clustering]
+    all_eigenvector = [training_eigenvector, erdos_renyi_eigenvector, generated_eigenvector]
+    
+    for i, (degrees, clustering, eigenvector) in enumerate(zip(all_degrees, all_clustering, all_eigenvector)):
+        color = colors[i]
         
-    for ax in [axes[0, 1], axes[1, 1], axes[2, 1]]:
-        ax.set_xlim(-0.05, cluster_max + 0.05)  # Extend left boundary to show full first bar
-        ax.tick_params(labelsize=12)
-        ax.set_ylabel('')  # Remove individual y labels
-        # Fix y-axis to reasonable density values
-        ax.set_ylim(0, None)  # Let matplotlib determine upper bound based on data
+        # Plot node degree
+        axes[i, 0].hist(degrees, bins=20, color=color, alpha=0.7, density=True)
         
-    for ax in [axes[0, 2], axes[1, 2], axes[2, 2]]:
-        ax.set_xlim(max(0.01, eigenvector_min), eigenvector_max)  # Start from slightly above 0
-        ax.tick_params(labelsize=12) 
-        ax.set_ylabel('')  # Remove individual y labels
-        ax.set_ylim(0, None)  # Let matplotlib determine upper bound based on data
+        # Handle clustering coefficient - Split into zero and non-zero values
+        total_count = len(clustering)
 
-    # Ensure density scaling is correct across all plots
-    for row in axes:
-        for ax in row:
-            current_ylim = ax.get_ylim()
-            if current_ylim[1] > 5:  # If scale appears to be percentage rather than density
-                ax.set_ylim(0, min(5, current_ylim[1]/100))  # Cap at 5 for density scale
+        # Add non-zero values as a histogram on same plot if they exist
 
-    # Adjust layout and save the figure
-    plt.tight_layout(rect=[0.08, 0.04, 1, 0.97])  # Adjust to leave space for labels
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        # Count non-zeros in bins
+        hist, bin_edges = np.histogram(clustering, bins=5, range=(0, 1))
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        # Normalize to get density
+        hist = hist / total_count
+        
+        # Plot as bars with consistent scaling
+        bin_width = bin_edges[1] - bin_edges[0]
+        axes[i, 1].bar(bin_centers, hist, width=bin_width*0.8, 
+                        color=color, alpha=0.7, label='Non-zero')
+    
+        # Add legend, set limits and labels
+        axes[i, 1].legend(loc='upper right')
+        axes[i, 1].set_xlim(-0.05, 1.05)
+        # axes[i, 1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        
+        # Plot eigenvector centrality
+        axes[i, 2].hist(eigenvector, bins=20, color=color, alpha=0.7, density=True)
+        
+        # Set labels for bottom row
+        if i == 2:
+            axes[i, 0].set_xlabel('Degree')
+            axes[i, 1].set_xlabel('Clustering Coefficient')
+            axes[i, 2].set_xlabel('Eigenvector Centrality')
+    
+    plt.tight_layout()
+    plt.savefig(save_path)
     plt.close()
     print(f"📊 Saved graph statistics to {save_path}")
+
 
 def plot_graph_comparison(training_samples, erdos_samples, vae_samples, save_path='graph_comparison.png', 
                          grid_height_ratios=[10, 10, 10, 1],
