@@ -37,72 +37,161 @@ def plot_sampled_graphs_collage(sampled_graphs, rows=3, cols=3, figsize=(15, 15)
     plt.close()
     print(f"📊 Saved collage to {save_path}")
 
+def plot_degree_distributions(axes, all_degrees, colors, row_labels):
+    """
+    Plot node degree distributions for different graph sources.
+    
+    Parameters:
+    -----------
+    axes : list of matplotlib.axes
+        List of axes to plot on
+    all_degrees : list of lists
+        Lists of degree values for each graph source
+    colors : list
+        Colors to use for each graph source
+    row_labels : list
+        Labels for each graph source
+    """
+    for i, degrees in enumerate(all_degrees):
+        color = colors[i]
+        
+        # Create fixed bins from 0 to 9 with integer steps (no gaps)
+        bins = np.arange(0, 11) - 0.5  # Edges at -0.5, 0.5, 1.5, ..., 9.5
+        
+        # Plot node degree histogram with fixed bins
+        axes[i].hist(degrees, bins=bins, color=color, alpha=0.7, density=True, 
+                    rwidth=1.0,  edgecolor='black', linewidth=0.5)  # Added black edges
+          # rwidth=1.0 ensures no gaps between bars
+
+        
+        # Set x-axis limits and ticks consistently for all plots
+        axes[i].set_xlim(-0.5, 9.5)
+        axes[i].set_xticks(range(0, 10))
+        # Increase font size of x-axis tick labels
+        axes[i].tick_params(axis='x', labelsize=14)
+
+def plot_clustering_distributions(axes, all_clustering, colors, row_labels):
+    """
+    Plot clustering coefficient distributions for different graph sources.
+    
+    Parameters:
+    -----------
+    axes : list of matplotlib.axes
+        List of axes to plot on
+    all_clustering : list of lists
+        Lists of clustering coefficient values for each graph source
+    colors : list
+        Colors to use for each graph source
+    row_labels : list
+        Labels for each graph source
+    """
+    for i, clustering in enumerate(all_clustering):
+        color = colors[i]
+        
+        # Use finer bins for clustering coefficients (0 to 1)
+        num_bins = 10  # Increased from 5 to 10 for finer granularity
+        bin_edges = np.linspace(0, 1, num_bins + 1)  # Equally spaced bins from 0 to 1
+        
+        # Count values in bins and normalize
+        total_count = len(clustering)
+        hist, _ = np.histogram(clustering, bins=bin_edges)
+        hist = hist / total_count if total_count > 0 else hist
+        
+        # Plot bars aligned with bin edges instead of centered, with black edges
+        bin_width = bin_edges[1] - bin_edges[0]
+        axes[i].bar(bin_edges[:-1], hist, width=bin_width, 
+                   color=color, alpha=0.7,
+                   align='edge', edgecolor='black', linewidth=0.5)  # Added black edges
+        
+        # Set consistent x limits and tick marks at more readable intervals
+        axes[i].set_xlim(0, 1.0)
+        # Show fewer tick marks to avoid crowding
+        tick_positions = np.linspace(0, 1, 6)  # 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
+        axes[i].set_xticks(tick_positions)
+        axes[i].set_xticklabels([f'{x:.1f}' for x in tick_positions])
+        # Increase font size of x-axis tick labels
+        axes[i].tick_params(axis='x', labelsize=14)
+        
+
+def plot_eigenvector_distributions(axes, all_eigenvector, colors, row_labels):
+    """
+    Plot eigenvector centrality distributions for different graph sources.
+    
+    Parameters:
+    -----------
+    axes : list of matplotlib.axes
+        List of axes to plot on
+    all_eigenvector : list of lists
+        Lists of eigenvector centrality values for each graph source
+    colors : list
+        Colors to use for each graph source
+    row_labels : list
+        Labels for each graph source
+    """
+    for i, eigenvector in enumerate(all_eigenvector):
+        color = colors[i]
+        
+        # Plot eigenvector centrality histogram
+        axes[i].hist(eigenvector, bins=20, color=color, alpha=0.7, density=True, edgecolor='black', linewidth=0.5)  # Added black edges
+        
+        
+        # Set appropriate ticks for eigenvector centrality histogram
+        if eigenvector:
+            max_eigen = max(eigenvector)
+            min_eigen = min(eigenvector)
+            eigen_ticks = np.linspace(min_eigen, max_eigen, 6)
+            axes[i].set_xticks(eigen_ticks)
+            axes[i].set_xticklabels([f'{x:.2f}' for x in eigen_ticks])
+            # Increase font size of x-axis tick labels
+            axes[i].tick_params(axis='x', labelsize=14)
+
 def plot_graph_statistics(training_degrees, training_clustering, training_eigenvector,
                           erdos_renyi_degrees, erdos_renyi_clustering, erdos_renyi_eigenvector,
                           generated_degrees, generated_clustering, generated_eigenvector,
                           save_path='graph_statistics_comparison_columns.png'):
     """Plot histograms of graph statistics for comparison."""
+    # Create figure with more left padding for labels
     fig, axes = plt.subplots(3, 3, figsize=(15, 12))
-    
     # Set titles for columns
-    axes[0, 0].set_title('Node Degree')
-    axes[0, 1].set_title('Clustering Coefficient')
-    axes[0, 2].set_title('Eigenvector Centrality')
+    axes[0, 0].set_title('Node Degree', fontweight='bold', fontsize=24)
+    axes[0, 1].set_title('Clustering Coefficient', fontweight='bold', fontsize=24)
+    axes[0, 2].set_title('Eigenvector Centrality', fontweight='bold', fontsize=24)
     
     # Row labels
     row_labels = ['Training', 'Erdős-Rényi', 'VAE']
+    
+    # Add row labels as bold text on the left side
     for i, label in enumerate(row_labels):
-        axes[i, 0].set_ylabel(label)
+        # Position the labels within the figure boundary
+        fig.text(0.013, 0.8 - i*0.3, label, fontweight='bold', ha='center', va='center', 
+                rotation='vertical', fontsize=24)
+    
+        # Add global "Density" label
+        fig.text(0.033, 0.8 - i*0.3, 'Density', ha='center', va='center', 
+                rotation='vertical', fontsize=16)
     
     # Colors for different data sources
     colors = ['blue', 'green', 'red']
     
-    # Group data for iteration
+    # Group data for each type of statistic
     all_degrees = [training_degrees, erdos_renyi_degrees, generated_degrees]
     all_clustering = [training_clustering, erdos_renyi_clustering, generated_clustering]
     all_eigenvector = [training_eigenvector, erdos_renyi_eigenvector, generated_eigenvector]
     
-    for i, (degrees, clustering, eigenvector) in enumerate(zip(all_degrees, all_clustering, all_eigenvector)):
-        color = colors[i]
-        
-        # Plot node degree
-        axes[i, 0].hist(degrees, bins=20, color=color, alpha=0.7, density=True)
-        
-        # Handle clustering coefficient - Split into zero and non-zero values
-        total_count = len(clustering)
-
-        # Add non-zero values as a histogram on same plot if they exist
-
-        # Count non-zeros in bins
-        hist, bin_edges = np.histogram(clustering, bins=5, range=(0, 1))
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        # Normalize to get density
-        hist = hist / total_count
-        
-        # Plot as bars with consistent scaling
-        bin_width = bin_edges[1] - bin_edges[0]
-        axes[i, 1].bar(bin_centers, hist, width=bin_width*0.8, 
-                        color=color, alpha=0.7, label='Non-zero')
+    # Plot each type of statistic using specialized functions
+    plot_degree_distributions(axes[:, 0], all_degrees, colors, row_labels)
+    plot_clustering_distributions(axes[:, 1], all_clustering, colors, row_labels)
+    plot_eigenvector_distributions(axes[:, 2], all_eigenvector, colors, row_labels)
     
-        # Add legend, set limits and labels
-        axes[i, 1].legend(loc='upper right')
-        axes[i, 1].set_xlim(-0.05, 1.05)
-        # axes[i, 1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        
-        # Plot eigenvector centrality
-        axes[i, 2].hist(eigenvector, bins=20, color=color, alpha=0.7, density=True)
-        
-        # Set labels for bottom row
-        if i == 2:
-            axes[i, 0].set_xlabel('Degree')
-            axes[i, 1].set_xlabel('Clustering Coefficient')
-            axes[i, 2].set_xlabel('Eigenvector Centrality')
+    # Set bottom row labels
+    # axes[2, 0].set_xlabel('Degree')
+    # axes[2, 1].set_xlabel('Clustering Coefficient')
+    # axes[2, 2].set_xlabel('Eigenvector Centrality')
     
-    plt.tight_layout()
+    plt.tight_layout(rect=[0.038, 0, 1, 1])  # Adjust layout but preserve left space for labels
     plt.savefig(save_path)
     plt.close()
     print(f"📊 Saved graph statistics to {save_path}")
-
 
 def plot_graph_comparison(training_samples, erdos_samples, vae_samples, save_path='graph_comparison.png', 
                          grid_height_ratios=[10, 10, 10, 1],
